@@ -4,7 +4,7 @@
 
 This is a Discord bot designed for license key management and user service validation. The bot provides commands to interact with a license management API, allowing users to generate keys, check user data, validate identifiers, and manage revenue modes through Discord chat commands.
 
-**Current Status**: ✅ Bot is live and operational, successfully connected to Discord as "Comp hub bot#8077" and serving 1 Discord server.
+**Current Status**: ✅ Bot is live and operational, successfully connected to Discord as "Comp hub bot#8077" and serving 1 Discord server. All key generation commands now include HWID validation and automatic Discord ID tracking.
 
 ## User Preferences
 
@@ -42,10 +42,10 @@ Preferred communication style: Simple, everyday language.
 - `!userdata` - Retrieve current user information from the API
 - `!revenuemode <service>` - Check revenue mode for a specific service
 - `!checkidentifier <identifier>` - Validate service identifiers
-- `!genkey <count> [note] [days]` - Generate premium license keys via GET method
-- `!genkeypost <count> [note] [days]` - Generate premium license keys via POST method (for larger payloads)
-- `!gennormalkey <count> [note] [days]` - Generate normal (non-premium) license keys via GET method
-- `!gennormalkeypost <count> [note] [days]` - Generate normal license keys via POST method
+- `!genkey <count> [note] [days]` - Generate premium license keys with HWID validation (auto-notes with Discord ID)
+- `!genkeypost <count> [note] [days]` - Generate premium keys via POST with HWID validation
+- `!gennormalkey <count> [note] [days]` - Generate normal keys with HWID validation (auto-notes with Discord ID)
+- `!gennormalkeypost <count> [note] [days]` - Generate normal keys via POST with HWID validation
 - `!fetchkey <key>` - Get detailed information about a specific key
 - `!editkey <key> [note] [isPremium] [days]` - Edit existing key properties
 - `!editgenkey <key> [note] [isPremium] [days]` - Edit generated key properties
