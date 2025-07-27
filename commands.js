@@ -125,13 +125,15 @@ Revenue Mode: ${revenue.data.revenueMode}`;
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
         
-        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}`);
+        const expireDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}, expires: ${expireDate}`);
         const gen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
             count: keyCount,
             isPremium: "true",
             note: note,
+            expire: expireDate,
             expiresByDaysKey: "true",
             daysKey: days,
             noHwidValidation: "false"
@@ -163,12 +165,14 @@ HWID Validation: Enabled`;
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
         
-        console.log(`🔑 Generating ${postKeyCount} key(s) via POST with note: ${postNote}, days: ${postDays}`);
+        const postExpireDate = new Date(Date.now() + postDays * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`🔑 Generating ${postKeyCount} key(s) via POST with note: ${postNote}, days: ${postDays}, expires: ${postExpireDate}`);
         const genPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: postKeyCount,
           isPremium: "true",
           note: postNote,
+          expire: postExpireDate,
           expiresByDaysKey: "true",
           daysKey: postDays,
           noHwidValidation: "false"
@@ -199,13 +203,15 @@ HWID Validation: Enabled`;
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
         
-        console.log(`🔑 Generating ${normalKeyCount} normal key(s) with note: ${normalNote}, days: ${normalDays}`);
+        const normalExpireDate = new Date(Date.now() + normalDays * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`🔑 Generating ${normalKeyCount} normal key(s) with note: ${normalNote}, days: ${normalDays}, expires: ${normalExpireDate}`);
         const normalGen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
             count: normalKeyCount,
             isPremium: "false",
             note: normalNote,
+            expire: normalExpireDate,
             expiresByDaysKey: "true",
             daysKey: normalDays,
             noHwidValidation: "false"
@@ -237,12 +243,14 @@ HWID Validation: Enabled`;
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
         
-        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST with note: ${normalPostNote}, days: ${normalPostDays}`);
+        const normalPostExpireDate = new Date(Date.now() + normalPostDays * 24 * 60 * 60 * 1000).toISOString();
+        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST with note: ${normalPostNote}, days: ${normalPostDays}, expires: ${normalPostExpireDate}`);
         const normalGenPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: normalPostKeyCount,
           isPremium: "false",
           note: normalPostNote,
+          expire: normalPostExpireDate,
           expiresByDaysKey: "true",
           daysKey: normalPostDays,
           noHwidValidation: "false"
