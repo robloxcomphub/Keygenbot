@@ -47,8 +47,10 @@ async function handleCommand(command, args, message) {
 \`!checkidentifier <identifier>\` - Validate an identifier
 
 **Key Management:**
-\`!genkey <count> [note] [days]\` - Generate new license key(s)
-\`!genkeypost <count> [note] [days]\` - Generate keys via POST (for larger payloads)
+\`!genkey <count> [note] [days]\` - Generate premium license key(s)
+\`!genkeypost <count> [note] [days]\` - Generate premium keys via POST (for larger payloads)
+\`!gennormalkey <count> [note] [days]\` - Generate normal (non-premium) license key(s)
+\`!gennormalkeypost <count> [note] [days]\` - Generate normal keys via POST
 \`!fetchkey <key>\` - Get information about a key
 \`!editkey <key> [note] [isPremium] [days]\` - Edit existing key
 \`!editgenkey <key> [note] [isPremium] [days]\` - Edit generated key
@@ -183,6 +185,80 @@ Premium: Yes
 HWID Validation: Disabled`;
         
         return message.reply(createResponse('Key Generation (POST)', postKeyInfo));
+
+      case 'gennormalkey':
+        if (!args[0]) {
+          return message.reply('❌ Please provide key count. Usage: `!gennormalkey <count> [note] [days]`');
+        }
+        
+        const normalKeyCount = parseInt(args[0]);
+        const normalNote = args[1] || 'Normal key generated via Discord Bot';
+        const normalDays = parseInt(args[2]) || 30;
+        
+        if (normalKeyCount > 100) {
+          return message.reply('❌ Maximum 100 keys can be generated at once.');
+        }
+        
+        console.log(`🔑 Generating ${normalKeyCount} normal key(s) with note: ${normalNote}, days: ${normalDays}`);
+        const normalGen = await API.get(`/generate-key/get`, {
+          params: {
+            apiKey,
+            count: normalKeyCount,
+            isPremium: false,
+            note: normalNote,
+            expiresByDaysKey: true,
+            daysKey: normalDays,
+            noHwidValidation: true
+          }
+        });
+        
+        const normalKeys = normalGen.data.generatedKeys;
+        const normalKeyList = normalKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
+        const normalKeyInfo = `Generated ${normalKeyCount} normal key(s):
+${normalKeyList}
+
+Note: ${normalNote}
+Expires: ${normalDays} days from creation
+Premium: No
+HWID Validation: Disabled`;
+        
+        return message.reply(createResponse('Normal Key Generation (GET)', normalKeyInfo));
+
+      case 'gennormalkeypost':
+        if (!args[0]) {
+          return message.reply('❌ Please provide key count. Usage: `!gennormalkeypost <count> [note] [days]`');
+        }
+        
+        const normalPostKeyCount = parseInt(args[0]);
+        const normalPostNote = args[1] || 'Normal key generated via Discord Bot (POST)';
+        const normalPostDays = parseInt(args[2]) || 30;
+        
+        if (normalPostKeyCount > 100) {
+          return message.reply('❌ Maximum 100 keys can be generated at once.');
+        }
+        
+        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST with note: ${normalPostNote}, days: ${normalPostDays}`);
+        const normalGenPost = await API.post('/generate-key/post', {
+          apiKey,
+          count: normalPostKeyCount,
+          isPremium: false,
+          note: normalPostNote,
+          expiresByDaysKey: true,
+          daysKey: normalPostDays,
+          noHwidValidation: true
+        });
+        
+        const normalPostKeys = normalGenPost.data.generatedKeys;
+        const normalPostKeyList = normalPostKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
+        const normalPostKeyInfo = `Generated ${normalPostKeyCount} normal key(s):
+${normalPostKeyList}
+
+Note: ${normalPostNote}
+Expires: ${normalPostDays} days from creation
+Premium: No
+HWID Validation: Disabled`;
+        
+        return message.reply(createResponse('Normal Key Generation (POST)', normalPostKeyInfo));
 
       case 'fetchkey':
         if (!args[0]) {
