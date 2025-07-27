@@ -118,7 +118,7 @@ Revenue Mode: ${revenue.data.revenueMode}`;
         }
         
         const keyCount = parseInt(args[0]);
-        const note = args[1] || 'Generated via Discord Bot';
+        const note = args[1] || `Discord-${message.author.id}`;
         const days = parseInt(args[2]) || 30;
         
         if (keyCount > 100) {
@@ -134,7 +134,7 @@ Revenue Mode: ${revenue.data.revenueMode}`;
             note: note,
             expiresByDaysKey: "true",
             daysKey: days,
-            noHwidValidation: "true"
+            noHwidValidation: "false"
           }
         });
         
@@ -146,7 +146,7 @@ ${keyList}
 Note: ${note}
 Expires: ${days} days from creation
 Premium: Yes
-HWID Validation: Disabled`;
+HWID Validation: Enabled`;
         
         return message.reply(createResponse('Key Generation (GET)', keyInfo));
 
@@ -156,7 +156,7 @@ HWID Validation: Disabled`;
         }
         
         const postKeyCount = parseInt(args[0]);
-        const postNote = args[1] || 'Generated via Discord Bot (POST)';
+        const postNote = args[1] || `Discord-${message.author.id}`;
         const postDays = parseInt(args[2]) || 30;
         
         if (postKeyCount > 100) {
@@ -171,7 +171,7 @@ HWID Validation: Disabled`;
           note: postNote,
           expiresByDaysKey: "true",
           daysKey: postDays,
-          noHwidValidation: "true"
+          noHwidValidation: "false"
         });
         
         const postKeys = genPost.data.generatedKeys;
@@ -182,7 +182,7 @@ ${postKeyList}
 Note: ${postNote}
 Expires: ${postDays} days from creation
 Premium: Yes
-HWID Validation: Disabled`;
+HWID Validation: Enabled`;
         
         return message.reply(createResponse('Key Generation (POST)', postKeyInfo));
 
@@ -192,10 +192,8 @@ HWID Validation: Disabled`;
         }
         
         const normalKeyCount = parseInt(args[0]);
-        const normalNote = args[1] || 'Normal key generated via Discord Bot';
+        const normalNote = args[1] || `Discord-${message.author.id}`;
         const normalDays = args[2] ? parseInt(args[2]) : 30;
-        
-        console.log(`Debug - Args received: [${args.join(', ')}]`);
         
         if (normalKeyCount > 100) {
           return message.reply('❌ Maximum 100 keys can be generated at once.');
@@ -210,7 +208,7 @@ HWID Validation: Disabled`;
             note: normalNote,
             expiresByDaysKey: "true",
             daysKey: normalDays,
-            noHwidValidation: "true"
+            noHwidValidation: "false"
           }
         });
         
@@ -222,7 +220,7 @@ ${normalKeyList}
 Note: ${normalNote}
 Expires: ${normalDays} days from creation
 Premium: No
-HWID Validation: Disabled`;
+HWID Validation: Enabled`;
         
         return message.reply(createResponse('Normal Key Generation (GET)', normalKeyInfo));
 
@@ -232,7 +230,7 @@ HWID Validation: Disabled`;
         }
         
         const normalPostKeyCount = parseInt(args[0]);
-        const normalPostNote = args[1] || 'Normal key generated via Discord Bot (POST)';
+        const normalPostNote = args[1] || `Discord-${message.author.id}`;
         const normalPostDays = args[2] ? parseInt(args[2]) : 30;
         
         if (normalPostKeyCount > 100) {
@@ -247,7 +245,7 @@ HWID Validation: Disabled`;
           note: normalPostNote,
           expiresByDaysKey: "true",
           daysKey: normalPostDays,
-          noHwidValidation: "true"
+          noHwidValidation: "false"
         });
         
         const normalPostKeys = normalGenPost.data.generatedKeys;
@@ -258,7 +256,7 @@ ${normalPostKeyList}
 Note: ${normalPostNote}
 Expires: ${normalPostDays} days from creation
 Premium: No
-HWID Validation: Disabled`;
+HWID Validation: Enabled`;
         
         return message.reply(createResponse('Normal Key Generation (POST)', normalPostKeyInfo));
 
