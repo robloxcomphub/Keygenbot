@@ -274,16 +274,21 @@ HWID Validation: Enabled`;
         }
         
         console.log(`🔍 Fetching key information: ${args[0]}`);
-        const fkey = await API.get(`/fetch/key?apiKey=${apiKey}&fetch=${args[0]}`);
+        const fkey = await API.get(`/fetch/key`, {
+          params: {
+            apiKey: apiKey,
+            fetch: args[0]
+          }
+        });
         
         const keyData = fkey.data.key;
         const fetchedKeyInfo = `Key: ${keyData.value || 'N/A'}
-Status: ${keyData.status || 'N/A'}
+ID: ${keyData.id || 'N/A'}
 Premium: ${keyData.isPremium ? 'Yes' : 'No'}
 Note: ${keyData.note || 'None'}
-Created: ${keyData.createdAt ? new Date(keyData.createdAt).toLocaleString() : 'N/A'}
 Expires: ${keyData.expiresAt ? new Date(keyData.expiresAt).toLocaleString() : 'Never'}
-HWID: ${keyData.hwid || 'Not set'}`;
+HWID: ${keyData.hwid || 'Not set'}
+HWID Validation: ${keyData.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         
         return message.reply(createResponse('Key Information', fetchedKeyInfo));
 
