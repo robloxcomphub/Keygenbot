@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // API configuration
 const API = axios.create({
-  baseURL: 'https://your-api-domain.com/api',
+  baseURL: 'https://dash.pandadevelopment.net/api',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
