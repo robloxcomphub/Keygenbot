@@ -1,0 +1,403 @@
+Use these endpoints to interact with our authentication system programmatically.
+
+Get User Data
+
+Fetches authenticated user profile and their linked service.
+
+GET/api/user
+Auth:
+Requires user to be logged in (via session or token).
+Response:
+{
+  "id": "user_id",
+  "username": "admin",
+  "service": {
+    "id": "svc_123",
+    "identifier": "pelinda",
+    ...
+  }
+}
+Get Revenue Mode
+
+Returns the revenue mode assigned to a specific service.
+
+GET/api/revenue-mode
+Parameters:
+Name	Type	Required	Description
+service	String	Yes	Service identifier
+Example:
+GET /api/revenue-mode?service=pelinda
+Response:
+{
+  "revenueMode": "LINKVERTISE" // Example enum value
+}
+Check Identifier
+
+Check if an identifier exists in the database.
+
+GET/api/identifier-check
+Parameters:
+Name	Type	Required	Description
+apiKey	String	Yes	Your service's API Key
+identifier	String	Yes	The service identifier to validate
+Example:
+GET /api/identifier-check?apiKey=YOUR_API_KEY&identifier=pelinda
+Response:
+{
+  "message": "Identifier check successful ✅",
+  "service": "pelinda"
+}
+Reset HWID
+
+Resets HWID binding on a key (if valid and cooldown period passed).
+
+GET/api/reset-hwid
+Parameters:
+Name	Type	Required	Description
+service	String	Yes	Service identifier
+key	String	Yes	Key to reset
+Example:
+GET /api/reset-hwid?service=pelinda&key=TESTKEY123
+Response:
+{
+  "message": "HWID reset successfully ✅"
+}
+/* Generate Keys (GET) */
+Generate Keys (GET)
+
+Generates new license keys using GET query params.
+
+GET/api/generate-key/get
+Parameters:
+apiKey (required)
+expire (optional) — ISO string or date
+count (required) — Number of keys to generate
+note (optional)
+isPremium (required) — true or false
+expiresByDaysKey (optional) — true/false
+daysKey (optional if above true) — Number
+noHwidValidation (optional) — true/false
+Example:
+GET /api/generate-key/get?apiKey=YOUR_API_KEY&count=3&note=GeneratedForTest&expire=2025-12-31T23:59:59.000Z&isPremium=true&expiresByDaysKey=true&daysKey=30&noHwidValidation=true
+Response:
+{
+  "message": "Keys generated successfully ✅",
+  "generatedKeys": [
+    {
+      "value": "SAMPLE-KEY-123",
+      "expiresAt": "2025-12-31T23:59:59.000Z",
+      "note": "GeneratedForTest",
+      "isPremium": true,
+      "expiresByDaysKey": true,
+      "daysKey": 30,
+      "noHwidValidation": true
+    }
+  ]
+}
+Generate Keys (POST)
+
+Same as GET version but allows larger payloads via POST body.
+
+POST/api/generate-key/post
+Body Parameters:
+apiKey (required)
+expire (optional) — ISO string
+count (required)
+note (optional)
+isPremium (required)
+expiresByDaysKey (optional)
+daysKey (required if above is true)
+noHwidValidation (optional)
+Example:
+POST /api/generate-key/post
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "count": 3,
+  "note": "GeneratedViaPost",
+  "expire": "2025-12-31T23:59:59.000Z",
+  "isPremium": true,
+  "expiresByDaysKey": true,
+  "daysKey": 30,
+  "noHwidValidation": true
+}
+Response:
+{
+  "message": "Keys generated successfully ✅",
+  "generatedKeys": [
+    {
+      "value": "SAMPLE-KEY-POST",
+      "expiresAt": "2025-12-31T23:59:59.000Z",
+      "note": "GeneratedViaPost",
+      "isPremium": true,
+      "expiresByDaysKey": true,
+      "daysKey": 30,
+      "noHwidValidation": true
+    }
+  ]
+}
+Fetch Key
+
+Retrieves key information based on value, note, or HWID.
+
+GET/api/fetch/key
+Parameters:
+apiKey (required)
+fetch (required) — The value, note, or HWID to search
+Example:
+GET /api/fetch/key?apiKey=YOUR_API_KEY&fetch=SAMPLE-KEY-123
+Response:
+{
+  "key": {
+    "id": "clx123example",
+    "value": "SAMPLE-KEY-123",
+    "note": "GeneratedForTest",
+    "isPremium": true,
+    "expiresAt": "2025-12-31T23:59:59.000Z",
+    "hwid": "HWID-EXAMPLE-123",
+    "noHwidValidation": true
+  }
+}
+Edit Key
+
+Update properties of an active license key using this endpoint.
+
+POST/api/key/edit
+Body Parameters:
+apiKey (required)
+keyValue (required)
+note (optional)
+isPremium (optional)
+expire (optional) — ISO string
+expiresByDaysKey (optional)
+daysKey (required if above is true)
+noHwidValidation (optional)
+Example:
+POST /api/key/edit
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "SAMPLE-KEY-123",
+  "note": "Updated Note",
+  "isPremium": false,
+  "expire": "2025-12-31T23:59:59.000Z",
+  "expiresByDaysKey": true,
+  "daysKey": 30,
+  "noHwidValidation": true
+}
+Response:
+{
+  "message": "Key updated successfully",
+  "key": {
+    "id": "clxxsampleid",
+    "value": "SAMPLE-KEY-123",
+    "note": "Updated Note",
+    "isPremium": false,
+    "expiresAt": "2025-12-31T23:59:59.000Z",
+    "expiresByDaysKey": true,
+    "daysKey": 30,
+    "noHwidValidation": true
+  }
+}
+Edit Generated Key
+
+Update properties of a generated (unclaimed) license key.
+
+POST/api/generated-key/edit
+Body Parameters:
+apiKey (required)
+keyValue (required)
+note (optional)
+isPremium (optional)
+expire (optional) — ISO string
+expiresByDaysKey (optional)
+daysKey (required if above is true)
+noHwidValidation (optional)
+Example:
+POST /api/generated-key/edit
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "UNCLAIMED-GENKEY-001",
+  "note": "Custom generated key",
+  "isPremium": true,
+  "expire": "2026-01-01T00:00:00.000Z",
+  "expiresByDaysKey": true,
+  "daysKey": 60,
+  "noHwidValidation": false
+}
+Response:
+{
+  "message": "Generated key updated successfully",
+  "generatedKey": {
+    "id": "clgenkeyid001",
+    "value": "UNCLAIMED-GENKEY-001",
+    "note": "Custom generated key",
+    "isPremium": true,
+    "expiresAt": "2026-01-01T00:00:00.000Z",
+    "expiresByDaysKey": true,
+    "daysKey": 60,
+    "noHwidValidation": false
+  }
+} 
+Edit Key
+
+Update properties of an active license key using this endpoint.
+
+POST/api/key/edit
+Body Parameters:
+apiKey (required)
+keyValue (required)
+note (optional)
+isPremium (optional)
+expire (optional) — ISO string
+expiresByDaysKey (optional)
+daysKey (required if above is true)
+noHwidValidation (optional)
+Example:
+POST /api/key/edit
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "SAMPLE-KEY-123",
+  "note": "Updated Note",
+  "isPremium": false,
+  "expire": "2025-12-31T23:59:59.000Z",
+  "expiresByDaysKey": true,
+  "daysKey": 30,
+  "noHwidValidation": true
+}
+Response:
+{
+  "message": "Key updated successfully",
+  "key": {
+    "id": "clxxsampleid",
+    "value": "SAMPLE-KEY-123",
+    "note": "Updated Note",
+    "isPremium": false,
+    "expiresAt": "2025-12-31T23:59:59.000Z",
+    "expiresByDaysKey": true,
+    "daysKey": 30,
+    "noHwidValidation": true
+  }
+}
+Edit Generated Key
+
+Update properties of a generated (unclaimed) license key.
+
+POST/api/generated-key/edit
+Body Parameters:
+apiKey (required)
+keyValue (required)
+note (optional)
+isPremium (optional)
+expire (optional) — ISO string
+expiresByDaysKey (optional)
+daysKey (required if above is true)
+noHwidValidation (optional)
+Example:
+POST /api/generated-key/edit
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "UNCLAIMED-GENKEY-001",
+  "note": "Custom generated key",
+  "isPremium": true,
+  "expire": "2026-01-01T00:00:00.000Z",
+  "expiresByDaysKey": true,
+  "daysKey": 60,
+  "noHwidValidation": false
+}
+Response:
+{
+  "message": "Generated key updated successfully",
+  "generatedKey": {
+    "id": "clgenkeyid001",
+    "value": "UNCLAIMED-GENKEY-001",
+    "note": "Custom generated key",
+    "isPremium": true,
+    "expiresAt": "2026-01-01T00:00:00.000Z",
+    "expiresByDaysKey": true,
+    "daysKey": 60,
+    "noHwidValidation": false
+  }
+} 
+Delete Key
+
+Deletes an active license key from the system.
+
+POST/api/key/delete
+Body Parameters:
+apiKey (required)
+keyValue (required)
+Example:
+POST /api/key/delete
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "SAMPLE-KEY-123"
+}
+Response:
+{
+  "message": "Key deleted successfully ✅"
+}
+Delete Generated Key
+
+Deletes a generated (unclaimed) key from the system.
+
+POST/api/generated-key/delete
+Body Parameters:
+apiKey (required)
+keyValue (required)
+Example:
+POST /api/generated-key/delete
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY",
+  "keyValue": "UNCLAIMED-GENKEY-001"
+}
+Response:
+{
+  "message": "Key deleted successfully ✅"
+}
+Execution Metrics
+
+Track and update the number of executions for a given service.
+
+Fetch Execution Count
+GET/api/execution/fetch
+Returns the number of times a service has been executed.
+
+Parameters:
+apiKey (required)
+Example:
+GET /api/execution/fetch?apiKey=YOUR_API_KEY
+Response:
+{
+  "executionCount": 128
+}
+Increment Execution Count
+POST/api/execution/push
+Increments the execution counter for the service.
+
+Body Parameters:
+apiKey (required)
+Example:
+POST /api/execution/push
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY"
+}
+Response:
+{
+  "success": true,
+  "message": "Execution count incremented successfully"
+}

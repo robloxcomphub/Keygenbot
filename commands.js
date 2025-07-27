@@ -47,10 +47,11 @@ async function handleCommand(command, args, message) {
 \`!checkidentifier <identifier>\` - Validate an identifier
 
 **Key Management:**
-\`!genkey [count] [note]\` - Generate new license key(s)
+\`!genkey <count> [note] [days]\` - Generate new license key(s)
+\`!genkeypost <count> [note] [days]\` - Generate keys via POST (for larger payloads)
 \`!fetchkey <key>\` - Get information about a key
-\`!editkey <key> [note] [isPremium]\` - Edit existing key
-\`!editgenkey <key> [note] [isPremium]\` - Edit generated key
+\`!editkey <key> [note] [isPremium] [days]\` - Edit existing key
+\`!editgenkey <key> [note] [isPremium] [days]\` - Edit generated key
 \`!deletekey <key>\` - Delete a key
 \`!deletegenkey <key>\` - Delete a generated key
 
@@ -66,15 +67,13 @@ async function handleCommand(command, args, message) {
 
       case 'userdata':
         console.log('🔍 Fetching user data...');
-        const user = await API.get('/user', { 
-          headers: { Authorization: `Bearer ${apiKey}` } 
-        });
+        const user = await API.get('/user');
         
         const userData = user.data;
-        const userInfo = `Username: ${userData.username}
-Service: ${userData.service?.identifier || 'N/A'}
-Service Name: ${userData.service?.name || 'N/A'}
-Status: ${userData.status || 'Active'}`;
+        const userInfo = `ID: ${userData.id || 'N/A'}
+Username: ${userData.username || 'N/A'}
+Service ID: ${userData.service?.id || 'N/A'}
+Service Identifier: ${userData.service?.identifier || 'N/A'}`;
         
         return message.reply(createResponse('User Information', userInfo));
 
@@ -112,23 +111,27 @@ Revenue Mode: ${revenue.data.revenueMode}`;
         return message.reply(createResponse('HWID Reset', reset.data.message));
 
       case 'genkey':
-        const keyCount = parseInt(args[0]) || 1;
-        const note = args[1] || 'Generated via Discord Bot';
-        
-        if (keyCount > 10) {
-          return message.reply('❌ Maximum 10 keys can be generated at once.');
+        if (!args[0]) {
+          return message.reply('❌ Please provide key count. Usage: `!genkey <count> [note] [days]`');
         }
         
-        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}`);
+        const keyCount = parseInt(args[0]);
+        const note = args[1] || 'Generated via Discord Bot';
+        const days = parseInt(args[2]) || 30;
+        
+        if (keyCount > 100) {
+          return message.reply('❌ Maximum 100 keys can be generated at once.');
+        }
+        
+        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}`);
         const gen = await API.get(`/generate-key/get`, {
           params: {
             apiKey,
             count: keyCount,
             isPremium: true,
             note: note,
-            expire: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             expiresByDaysKey: true,
-            daysKey: 30,
+            daysKey: days,
             noHwidValidation: true
           }
         });
@@ -139,10 +142,47 @@ Revenue Mode: ${revenue.data.revenueMode}`;
 ${keyList}
 
 Note: ${note}
-Expires: 30 days from now
-Premium: Yes`;
+Expires: ${days} days from creation
+Premium: Yes
+HWID Validation: Disabled`;
         
-        return message.reply(createResponse('Key Generation', keyInfo));
+        return message.reply(createResponse('Key Generation (GET)', keyInfo));
+
+      case 'genkeypost':
+        if (!args[0]) {
+          return message.reply('❌ Please provide key count. Usage: `!genkeypost <count> [note] [days]`');
+        }
+        
+        const postKeyCount = parseInt(args[0]);
+        const postNote = args[1] || 'Generated via Discord Bot (POST)';
+        const postDays = parseInt(args[2]) || 30;
+        
+        if (postKeyCount > 100) {
+          return message.reply('❌ Maximum 100 keys can be generated at once.');
+        }
+        
+        console.log(`🔑 Generating ${postKeyCount} key(s) via POST with note: ${postNote}, days: ${postDays}`);
+        const genPost = await API.post('/generate-key/post', {
+          apiKey,
+          count: postKeyCount,
+          isPremium: true,
+          note: postNote,
+          expiresByDaysKey: true,
+          daysKey: postDays,
+          noHwidValidation: true
+        });
+        
+        const postKeys = genPost.data.generatedKeys;
+        const postKeyList = postKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
+        const postKeyInfo = `Generated ${postKeyCount} key(s):
+${postKeyList}
+
+Note: ${postNote}
+Expires: ${postDays} days from creation
+Premium: Yes
+HWID Validation: Disabled`;
+        
+        return message.reply(createResponse('Key Generation (POST)', postKeyInfo));
 
       case 'fetchkey':
         if (!args[0]) {
@@ -165,11 +205,12 @@ HWID: ${keyData.hwid || 'Not set'}`;
 
       case 'editkey':
         if (!args[0]) {
-          return message.reply('❌ Please provide a key. Usage: `!editkey <key> [note] [isPremium]`');
+          return message.reply('❌ Please provide a key. Usage: `!editkey <key> [note] [isPremium] [days]`');
         }
         
         const editNote = args[1] || 'Edited via Discord Bot';
-        const isPremium = args[2] === 'true';
+        const isPremium = args[2] ? args[2] === 'true' : true;
+        const editDays = parseInt(args[3]) || 30;
         
         console.log(`✏️ Editing key: ${args[0]}`);
         const editKey = await API.post('/key/edit', {
@@ -177,18 +218,29 @@ HWID: ${keyData.hwid || 'Not set'}`;
           keyValue: args[0],
           note: editNote,
           isPremium: isPremium,
+          expiresByDaysKey: true,
+          daysKey: editDays,
           noHwidValidation: true
         });
         
-        return message.reply(createResponse('Key Edit', editKey.data.message));
+        const editedKey = editKey.data.key;
+        const editInfo = `Key: ${editedKey.value}
+Note: ${editedKey.note}
+Premium: ${editedKey.isPremium ? 'Yes' : 'No'}
+Expires: ${editedKey.expiresAt ? new Date(editedKey.expiresAt).toLocaleString() : 'Never'}
+Days: ${editedKey.daysKey || 'N/A'}
+HWID Validation: ${editedKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
+        
+        return message.reply(createResponse('Key Edit Success', editInfo));
 
       case 'editgenkey':
         if (!args[0]) {
-          return message.reply('❌ Please provide a key. Usage: `!editgenkey <key> [note] [isPremium]`');
+          return message.reply('❌ Please provide a key. Usage: `!editgenkey <key> [note] [isPremium] [days]`');
         }
         
         const editGenNote = args[1] || 'Edited via Discord Bot';
-        const isGenPremium = args[2] === 'true';
+        const isGenPremium = args[2] ? args[2] === 'true' : true;
+        const editGenDays = parseInt(args[3]) || 30;
         
         console.log(`✏️ Editing generated key: ${args[0]}`);
         const editGen = await API.post('/generated-key/edit', {
@@ -196,10 +248,20 @@ HWID: ${keyData.hwid || 'Not set'}`;
           keyValue: args[0],
           note: editGenNote,
           isPremium: isGenPremium,
+          expiresByDaysKey: true,
+          daysKey: editGenDays,
           noHwidValidation: true
         });
         
-        return message.reply(createResponse('Generated Key Edit', editGen.data.message));
+        const editedGenKey = editGen.data.generatedKey;
+        const editGenInfo = `Generated Key: ${editedGenKey.value}
+Note: ${editedGenKey.note}
+Premium: ${editedGenKey.isPremium ? 'Yes' : 'No'}
+Expires: ${editedGenKey.expiresAt ? new Date(editedGenKey.expiresAt).toLocaleString() : 'Never'}
+Days: ${editedGenKey.daysKey || 'N/A'}
+HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
+        
+        return message.reply(createResponse('Generated Key Edit Success', editGenInfo));
 
       case 'deletekey':
         if (!args[0]) {

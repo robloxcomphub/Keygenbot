@@ -42,7 +42,16 @@ Preferred communication style: Simple, everyday language.
 - `!userdata` - Retrieve current user information from the API
 - `!revenuemode <service>` - Check revenue mode for a specific service
 - `!checkidentifier <identifier>` - Validate service identifiers
-- `!genkey [count] [note]` - Generate new license keys
+- `!genkey <count> [note] [days]` - Generate new license keys via GET method
+- `!genkeypost <count> [note] [days]` - Generate new license keys via POST method (for larger payloads)
+- `!fetchkey <key>` - Get detailed information about a specific key
+- `!editkey <key> [note] [isPremium] [days]` - Edit existing key properties
+- `!editgenkey <key> [note] [isPremium] [days]` - Edit generated key properties
+- `!deletekey <key>` - Delete an active key
+- `!deletegenkey <key>` - Delete a generated key
+- `!resethwid <service> <key>` - Reset HWID binding for a key
+- `!executioncount` - Get current execution count for the service
+- `!pushexecution` - Increment execution count
 
 ## Data Flow
 
