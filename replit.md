@@ -60,7 +60,7 @@ Preferred communication style: Simple, everyday language.
 - **dotenv (v17.2.1)**: Environment variable management
 
 ### API Integration
-- **License Management API**: External service at `https://dash.pandadevelopment.net/api`
+- **License Management API**: External service at `https://pandadevelopment.net/api`
 - **Authentication**: Bearer token authentication using API_KEY environment variable
 - **Timeout Configuration**: 15-second timeout for API requests
 
