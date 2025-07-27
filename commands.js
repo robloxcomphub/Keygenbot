@@ -195,6 +195,8 @@ HWID Validation: Disabled`;
         const normalNote = args[1] || 'Normal key generated via Discord Bot';
         const normalDays = args[2] ? parseInt(args[2]) : 30;
         
+        console.log(`Debug - Args received: [${args.join(', ')}]`);
+        
         if (normalKeyCount > 100) {
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
