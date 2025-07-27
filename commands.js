@@ -128,13 +128,13 @@ Revenue Mode: ${revenue.data.revenueMode}`;
         console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}`);
         const gen = await API.get(`/generate-key/get`, {
           params: {
-            apiKey,
+            apiKey: apiKey,
             count: keyCount,
-            isPremium: true,
+            isPremium: "true",
             note: note,
-            expiresByDaysKey: true,
+            expiresByDaysKey: "true",
             daysKey: days,
-            noHwidValidation: true
+            noHwidValidation: "true"
           }
         });
         
@@ -165,13 +165,13 @@ HWID Validation: Disabled`;
         
         console.log(`🔑 Generating ${postKeyCount} key(s) via POST with note: ${postNote}, days: ${postDays}`);
         const genPost = await API.post('/generate-key/post', {
-          apiKey,
+          apiKey: apiKey,
           count: postKeyCount,
-          isPremium: true,
+          isPremium: "true",
           note: postNote,
-          expiresByDaysKey: true,
+          expiresByDaysKey: "true",
           daysKey: postDays,
-          noHwidValidation: true
+          noHwidValidation: "true"
         });
         
         const postKeys = genPost.data.generatedKeys;
@@ -202,13 +202,13 @@ HWID Validation: Disabled`;
         console.log(`🔑 Generating ${normalKeyCount} normal key(s) with note: ${normalNote}, days: ${normalDays}`);
         const normalGen = await API.get(`/generate-key/get`, {
           params: {
-            apiKey,
+            apiKey: apiKey,
             count: normalKeyCount,
-            isPremium: false,
+            isPremium: "false",
             note: normalNote,
-            expiresByDaysKey: true,
+            expiresByDaysKey: "true",
             daysKey: normalDays,
-            noHwidValidation: true
+            noHwidValidation: "true"
           }
         });
         
@@ -239,13 +239,13 @@ HWID Validation: Disabled`;
         
         console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST with note: ${normalPostNote}, days: ${normalPostDays}`);
         const normalGenPost = await API.post('/generate-key/post', {
-          apiKey,
+          apiKey: apiKey,
           count: normalPostKeyCount,
-          isPremium: false,
+          isPremium: "false",
           note: normalPostNote,
-          expiresByDaysKey: true,
+          expiresByDaysKey: "true",
           daysKey: normalPostDays,
-          noHwidValidation: true
+          noHwidValidation: "true"
         });
         
         const normalPostKeys = normalGenPost.data.generatedKeys;
