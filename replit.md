@@ -42,8 +42,10 @@ Preferred communication style: Simple, everyday language.
 - `!userdata` - Retrieve current user information from the API
 - `!revenuemode <service>` - Check revenue mode for a specific service
 - `!checkidentifier <identifier>` - Validate service identifiers
-- `!genkey <count> [note] [days]` - Generate new license keys via GET method
-- `!genkeypost <count> [note] [days]` - Generate new license keys via POST method (for larger payloads)
+- `!genkey <count> [note] [days]` - Generate premium license keys via GET method
+- `!genkeypost <count> [note] [days]` - Generate premium license keys via POST method (for larger payloads)
+- `!gennormalkey <count> [note] [days]` - Generate normal (non-premium) license keys via GET method
+- `!gennormalkeypost <count> [note] [days]` - Generate normal license keys via POST method
 - `!fetchkey <key>` - Get detailed information about a specific key
 - `!editkey <key> [note] [isPremium] [days]` - Edit existing key properties
 - `!editgenkey <key> [note] [isPremium] [days]` - Edit generated key properties

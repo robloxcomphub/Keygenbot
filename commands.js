@@ -193,7 +193,7 @@ HWID Validation: Disabled`;
         
         const normalKeyCount = parseInt(args[0]);
         const normalNote = args[1] || 'Normal key generated via Discord Bot';
-        const normalDays = parseInt(args[2]) || 30;
+        const normalDays = args[2] ? parseInt(args[2]) : 30;
         
         if (normalKeyCount > 100) {
           return message.reply('❌ Maximum 100 keys can be generated at once.');
@@ -231,7 +231,7 @@ HWID Validation: Disabled`;
         
         const normalPostKeyCount = parseInt(args[0]);
         const normalPostNote = args[1] || 'Normal key generated via Discord Bot (POST)';
-        const normalPostDays = parseInt(args[2]) || 30;
+        const normalPostDays = args[2] ? parseInt(args[2]) : 30;
         
         if (normalPostKeyCount > 100) {
           return message.reply('❌ Maximum 100 keys can be generated at once.');
