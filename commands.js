@@ -131,12 +131,12 @@ Revenue Mode: ${revenue.data.revenueMode}`;
           params: {
             apiKey: apiKey,
             count: keyCount,
-            isPremium: "true",
+            isPremium: true,
             note: note,
             expire: expireDate,
-            expiresByDaysKey: "true",
+            expiresByDaysKey: true,
             daysKey: days,
-            noHwidValidation: "false"
+            noHwidValidation: false
           }
         });
         
@@ -170,12 +170,12 @@ HWID Validation: Enabled`;
         const genPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: postKeyCount,
-          isPremium: "true",
+          isPremium: true,
           note: postNote,
           expire: postExpireDate,
-          expiresByDaysKey: "true",
+          expiresByDaysKey: true,
           daysKey: postDays,
-          noHwidValidation: "false"
+          noHwidValidation: false
         });
         
         const postKeys = genPost.data.generatedKeys;
@@ -209,12 +209,12 @@ HWID Validation: Enabled`;
           params: {
             apiKey: apiKey,
             count: normalKeyCount,
-            isPremium: "false",
+            isPremium: false,
             note: normalNote,
             expire: normalExpireDate,
-            expiresByDaysKey: "true",
+            expiresByDaysKey: true,
             daysKey: normalDays,
-            noHwidValidation: "false"
+            noHwidValidation: false
           }
         });
         
@@ -248,12 +248,12 @@ HWID Validation: Enabled`;
         const normalGenPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: normalPostKeyCount,
-          isPremium: "false",
+          isPremium: false,
           note: normalPostNote,
           expire: normalPostExpireDate,
-          expiresByDaysKey: "true",
+          expiresByDaysKey: true,
           daysKey: normalPostDays,
-          noHwidValidation: "false"
+          noHwidValidation: false
         });
         
         const normalPostKeys = normalGenPost.data.generatedKeys;
@@ -309,7 +309,7 @@ HWID Validation: ${keyData.noHwidValidation ? 'Disabled' : 'Enabled'}`;
           isPremium: isPremium,
           expiresByDaysKey: true,
           daysKey: editDays,
-          noHwidValidation: true
+          noHwidValidation: false
         });
         
         const editedKey = editKey.data.key;
@@ -339,7 +339,7 @@ HWID Validation: ${editedKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
           isPremium: isGenPremium,
           expiresByDaysKey: true,
           daysKey: editGenDays,
-          noHwidValidation: true
+          noHwidValidation: false
         });
         
         const editedGenKey = editGen.data.generatedKey;

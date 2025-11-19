@@ -22,3 +22,6 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm install && node index.js"
+
+[agent]
+expertMode = true
