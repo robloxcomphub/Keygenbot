@@ -4,11 +4,20 @@
 
 This is a Discord bot designed for license key management and user service validation. The bot provides commands to interact with a license management API, allowing users to generate keys, check user data, validate identifiers, and manage revenue modes through Discord chat commands.
 
-**Current Status**: ✅ Bot is live and operational, successfully connected to Discord as "Comp hub bot#8077" and serving 1 Discord server. All key generation commands now include HWID validation and automatic Discord ID tracking.
+**Current Status**: ✅ Bot is live and operational, successfully connected to Discord as "Comp hub bot#8077" and serving 2 Discord servers. All key generation commands now include HWID validation and automatic Discord ID tracking. Role-based access control is enabled.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Security & Access Control
+
+### Role-Based Command Access
+- **Required Role ID**: `1441518702007943253`
+- Only users with this specific role can execute bot commands
+- Commands in DMs are blocked - bot only works in servers
+- Access denied messages are logged for security monitoring
+- Unauthorized users receive a clear permission error message
 
 ## System Architecture
 
