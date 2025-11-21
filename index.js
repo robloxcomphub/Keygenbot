@@ -31,7 +31,7 @@ client.on('messageCreate', async message => {
     const member = message.member;
     if (!member.roles.cache.has(REQUIRED_ROLE_ID)) {
       console.log(`🚫 Access denied: ${message.author.tag} lacks required role`);
-      return message.reply('❌ You do not have permission to use this bot. Required role is missing.');
+      return message.reply('You do not have access to generate keys!');
     }
   } else {
     // Deny commands in DMs
