@@ -42,7 +42,7 @@ async function handleCommand(command, args, message) {
       // ---------------- NEW COMMAND ----------------
       case 'manualsys':
         return message.reply(
-          "Hello, please complete the manual key system with the link below and join the server it leads to,\n" +
+          "Hello, please complete the manual key system with the link below and join the server it leads to" +
           "then show proof of completion and click on the checkpoint 2 channel and complete the second checkpoint:\n" +
           "https://rinku.pro/manual1"
         );
@@ -417,15 +417,16 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const isLifetime = args[1]?.toLowerCase() === 'lifetime';
         const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
         const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
+        const whitelistNote = isLifetime ? `${mentionedUser.id} premium whitelist` : `Discord-${mentionedUser.id}`;
         
-        console.log(`🔑 Whitelisting user: ${mentionedUser.tag}`);
+        console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`);
         
         const whitelistGen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
             count: 1,
             isPremium: true,
-            note: `Discord-${mentionedUser.id}`,
+            note: whitelistNote,
             expire: whitelistExpireDate,
             expiresByDaysKey: true,
             daysKey: whitelistDays,
