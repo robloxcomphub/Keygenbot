@@ -1,0 +1,8 @@
+node_modules/
+.env
+.replit
+.config/
+.cache/
+.upm/
+replit.nix
+.breakpoints
