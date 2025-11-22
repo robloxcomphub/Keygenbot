@@ -421,7 +421,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const whitelistKey = whitelistGen.data.generatedKeys[0].value;
         
         try {
-          await mentionedUser.send(`You have been whitelisted, here is your key: ${whitelistKey}`);
+          await mentionedUser.send(`🎉 You have been whitelisted! 🎉\n\n🔑 Here is your key: **${whitelistKey}**\n\n⏰ Valid for ${whitelistDays} days\n✨ Enjoy!`);
           
           return message.reply(createResponse('Whitelist Success', 
             `User: ${mentionedUser.tag}\nKey sent via DM\nExpires in: ${whitelistDays} days`));
