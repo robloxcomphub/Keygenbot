@@ -47,6 +47,7 @@ async function handleCommand(command, args, message) {
 \`!checkidentifier <identifier>\` - Validate an identifier
 
 **Key Management:**
+\`!whitelist @user [days]\` - Generate key and DM to user
 \`!genkey <count> [note] [days]\` - Generate premium license key(s)
 \`!genkeypost <count> [note] [days]\` - Generate premium keys via POST (for larger payloads)
 \`!gennormalkey <count> [note] [days]\` - Generate normal (non-premium) license key(s)
@@ -391,6 +392,43 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const push = await API.post('/execution/push', { apiKey });
         
         return message.reply(createResponse('Execution Push', push.data.message));
+
+      case 'whitelist':
+        const mentionedUser = message.mentions.users.first();
+        
+        if (!mentionedUser) {
+          return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days]`');
+        }
+        
+        const whitelistDays = parseInt(args[1]) || 30;
+        const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
+        
+        console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id})`);
+        
+        const whitelistGen = await API.get(`/generate-key/get`, {
+          params: {
+            apiKey: apiKey,
+            count: 1,
+            isPremium: true,
+            note: `Discord-${mentionedUser.id}`,
+            expire: whitelistExpireDate,
+            expiresByDaysKey: true,
+            daysKey: whitelistDays,
+            noHwidValidation: false
+          }
+        });
+        
+        const whitelistKey = whitelistGen.data.generatedKeys[0].value;
+        
+        try {
+          await mentionedUser.send(`You have been whitelisted, here is your key: ${whitelistKey}`);
+          
+          return message.reply(createResponse('Whitelist Success', 
+            `User: ${mentionedUser.tag}\nKey sent via DM\nExpires in: ${whitelistDays} days`));
+        } catch (dmError) {
+          return message.reply(createResponse('Whitelist - DM Failed', 
+            `Key generated but couldn't DM user.\nKey: ${whitelistKey}\nPlease share manually.`, true));
+        }
 
       default:
         return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
