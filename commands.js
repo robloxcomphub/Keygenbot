@@ -38,6 +38,16 @@ async function handleCommand(command, args, message) {
 
   try {
     switch (command) {
+
+      // ---------------- NEW COMMAND ----------------
+      case 'manualsys':
+        return message.reply(
+          "Hello, please complete the manual key system with the link below and join the server it leads to,\n" +
+          "then show proof of completion and click on the checkpoint 2 channel and complete the second checkpoint:\n" +
+          "https://rinku.pro/manual1"
+        );
+      // ------------------------------------------------
+
       case 'help':
         const helpText = `**🤖 License Management Bot Commands**
 
@@ -49,23 +59,24 @@ async function handleCommand(command, args, message) {
 **Key Management:**
 \`!whitelist @user [days|lifetime]\` - Generate key and DM to user
 \`!genkey <count> [note] [days]\` - Generate premium license key(s)
-\`!genkeypost <count> [note] [days]\` - Generate premium keys via POST (for larger payloads)
-\`!gennormalkey <count> [note] [days]\` - Generate normal (non-premium) license key(s)
+\`!genkeypost <count> [note] [days]\` - Generate premium keys via POST
+\`!gennormalkey <count> [note] [days]\` - Generate normal license key(s)
 \`!gennormalkeypost <count> [note] [days]\` - Generate normal keys via POST
-\`!fetchkey <key>\` - Get information about a key
-\`!editkey <key> [note] [isPremium] [days]\` - Edit existing key
-\`!editgenkey <key> [note] [isPremium] [days]\` - Edit generated key
+\`!fetchkey <key>\` - Look up a key
+\`!editkey <key> [note] [isPremium] [days]\` - Edit a key
+\`!editgenkey <key> [note] [isPremium] [days]\` - Edit a generated key
 \`!deletekey <key>\` - Delete a key
 \`!deletegenkey <key>\` - Delete a generated key
 
 **HWID & Execution:**
-\`!resethwid <service> <key>\` - Reset HWID for a key
-\`!executioncount\` - Get current execution count
-\`!pushexecution\` - Increment execution count
+\`!resethwid <service> <key>\` - Reset HWID
+\`!executioncount\` - Fetch execution count
+\`!pushexecution\` - Push execution count
 
 **Other:**
+\`!manualsys\` - Manual system instructions
 \`!help\` - Show this help message`;
-        
+
         return message.reply(helpText);
 
       case 'userdata':
@@ -127,7 +138,7 @@ Revenue Mode: ${revenue.data.revenueMode}`;
         }
         
         const expireDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}, expires: ${expireDate}`);
+        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}`);
         const gen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
@@ -167,7 +178,8 @@ HWID Validation: Enabled`;
         }
         
         const postExpireDate = new Date(Date.now() + postDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${postKeyCount} key(s) via POST with note: ${postNote}, days: ${postDays}, expires: ${postExpireDate}`);
+        console.log(`🔑 Generating ${postKeyCount} key(s) via POST`);
+        
         const genPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: postKeyCount,
@@ -205,7 +217,8 @@ HWID Validation: Enabled`;
         }
         
         const normalExpireDate = new Date(Date.now() + normalDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${normalKeyCount} normal key(s) with note: ${normalNote}, days: ${normalDays}, expires: ${normalExpireDate}`);
+        console.log(`🔑 Generating ${normalKeyCount} normal key(s)`);
+        
         const normalGen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
@@ -245,7 +258,8 @@ HWID Validation: Enabled`;
         }
         
         const normalPostExpireDate = new Date(Date.now() + normalPostDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST with note: ${normalPostNote}, days: ${normalPostDays}, expires: ${normalPostExpireDate}`);
+        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST`);
+        
         const normalGenPost = await API.post('/generate-key/post', {
           apiKey: apiKey,
           count: normalPostKeyCount,
@@ -404,7 +418,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
         const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
         
-        console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`);
+        console.log(`🔑 Whitelisting user: ${mentionedUser.tag}`);
         
         const whitelistGen = await API.get(`/generate-key/get`, {
           params: {
@@ -423,10 +437,16 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const validityMessage = isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`;
         
         try {
-          await mentionedUser.send(`🎉 You have been whitelisted! 🎉\n\n🔑 Here is your key: **${whitelistKey}**\n\n${validityMessage}\n✨ Enjoy!`);
+          await mentionedUser.send(`🎉 You have been whitelisted!
+
+🔑 **Your Key:** ${whitelistKey}
+
+${validityMessage}
+
+Enjoy!`);
           
           return message.reply(createResponse('Whitelist Success', 
-            `User: ${mentionedUser.tag}\nKey sent via DM\n${isLifetime ? 'Lifetime access' : 'Expires in: ' + whitelistDays + ' days'}`));
+            `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`));
         } catch (dmError) {
           return message.reply(createResponse('Whitelist - DM Failed', 
             `Key generated but couldn't DM user.\nKey: ${whitelistKey}\nPlease share manually.`, true));
@@ -435,6 +455,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
       default:
         return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
     }
+
   } catch (error) {
     console.error(`❌ API Error for command !${command}:`, error.response?.data || error.message);
     
