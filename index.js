@@ -29,17 +29,25 @@ client.once('ready', () => {
   console.log(`✅ Bot logged in as ${client.user.tag}`);
   console.log(`🤖 Bot is ready and listening for commands with ! prefix`);
   console.log(`📊 Connected to ${client.guilds.cache.size} server(s)`);
+
+  // ⭐ PRESENCE ADDED HERE ⭐
+  client.user.setPresence({
+    activities: [
+      {
+        name: "over Comphub",
+        type: 3 // 3 = WATCHING
+      }
+    ],
+    status: "online"
+  });
 });
 
 // Message handling for commands
 client.on('messageCreate', async message => {
-  // Ignore messages that don't start with ! or are from bots
   if (!message.content.startsWith('!') || message.author.bot) return;
   
-  // Required role ID for command access
   const REQUIRED_ROLE_ID = '1441518702007943253';
   
-  // Check if message is from a guild and user has the required role
   if (message.guild) {
     const member = message.member;
     if (!member.roles.cache.has(REQUIRED_ROLE_ID)) {
@@ -47,11 +55,9 @@ client.on('messageCreate', async message => {
       return message.reply('You do not have access to generate keys!');
     }
   } else {
-    // Deny commands in DMs
     return message.reply('❌ This bot can only be used in servers, not in DMs.');
   }
   
-  // Parse command and arguments
   const args = message.content.slice(1).split(' ');
   const command = args.shift().toLowerCase();
   
