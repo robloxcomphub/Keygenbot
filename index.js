@@ -34,7 +34,7 @@ client.once('ready', () => {
   client.user.setPresence({
     activities: [
       {
-        name: "over Comphub",
+        name: "Comphub",
         type: 3 // 3 = WATCHING
       }
     ],
