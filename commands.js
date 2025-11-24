@@ -452,57 +452,6 @@ Enjoy!`);
           return message.reply(createResponse('Whitelist - DM Failed', 
             `Key generated but couldn't DM user.\nKey: ${whitelistKey}\nPlease share manually.`, true));
         }
-// ---------------- NEW COMMANDS ----------------
-
-case 'ping':
-    return message.reply('🏓 Pong!');
-
-case 'hire':
-    {
-        const userToHire = message.mentions.members.first();
-        if (!userToHire) return message.reply('❌ Please mention a user to hire. Usage: `!hire @user`');
-
-        // Add roles 1394647055808331828 and 1398740118570930226
-        const rolesToAdd = ['1394647055808331828', '1398740118570930226'];
-        await userToHire.roles.add(rolesToAdd);
-
-        // Log to channel
-        const logChannel = message.guild.channels.cache.get('1395288612815370');
-        if (logChannel) {
-            logChannel.send(`✅ ${message.author.tag} hired ${userToHire.user.tag}`);
-        }
-
-        return message.reply(`✅ ${userToHire.user.tag} has been hired!`);
-    }
-
-case 'fire':
-    {
-        const userToFire = message.mentions.members.first();
-        const reason = args.slice(1).join(' ') || 'No reason provided';
-        if (!userToFire) return message.reply('❌ Please mention a user to fire. Usage: `!fire @user <reason>`');
-
-        // Remove all roles except 1394646957913407488
-        const keepRole = '1394646957913407488';
-        const rolesToRemove = userToFire.roles.cache
-            .filter(role => role.id !== keepRole)
-            .map(role => role.id);
-        await userToFire.roles.remove(rolesToRemove);
-
-        // DM the user
-        try {
-            await userToFire.send(`❌ You have been fired from your position.\nReason: ${reason}`);
-        } catch {}
-
-        // Log to channel
-        const logChannel = message.guild.channels.cache.get('1395288612815370');
-        if (logChannel) {
-            logChannel.send(`❌ ${message.author.tag} fired ${userToFire.user.tag}\nReason: ${reason}`);
-        }
-
-        return message.reply(`✅ ${userToFire.user.tag} has been fired!`);
-    }
-
-// ------------------------------------------------
 
       default:
         return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
