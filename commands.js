@@ -39,6 +39,135 @@ async function handleCommand(command, args, message) {
   try {
     switch (command) {
 
+
+        // -------------------- GIVEAWAY COMMAND --------------------
+case 'giveaway': {
+  if (!args[0] || !args[1] || !args[2]) {
+    return message.reply(
+      '❌ Usage: `!giveaway <minutes> <keyCount> <itemName> [@riggedUser]`\n\n' +
+      'Example normal: `!giveaway 5 1 MyItem`\n' +
+      'Example rigged: `!giveaway 5 1 MyItem @User`'
+    );
+  }
+
+  const durationMinutes = parseInt(args[0]);
+  const keyCount = parseInt(args[1]);
+  const itemName = args[2];
+  const riggedUser = message.mentions.users.first() || null;
+
+  if (isNaN(durationMinutes) || durationMinutes <= 0) {
+    return message.reply('❌ Duration must be a valid positive number.');
+  }
+
+  if (isNaN(keyCount) || keyCount <= 0 || keyCount > 10) {
+    return message.reply('❌ Key count must be between **1-10**.');
+  }
+
+  console.log(`🎉 Starting giveaway: ${keyCount} key(s) + item '${itemName}'` + (riggedUser ? ` (RIGGED → ${riggedUser.tag})` : ''));
+
+  // Generate keys
+  const expireDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const note = `Giveaway-${message.author.id}`;
+
+  const gen = await API.get(`/generate-key/get`, {
+    params: {
+      apiKey,
+      count: keyCount,
+      isPremium: true,
+      note: note,
+      expire: expireDate,
+      expiresByDaysKey: true,
+      daysKey: 30,
+      noHwidValidation: false
+    }
+  });
+
+  const keys = gen.data.generatedKeys.map(k => k.value);
+
+  // Giveaway announcement
+  const giveawayMsg = await message.channel.send(
+    `🎉 **GIVEAWAY STARTED!** 🎉
+
+React with 🎁 to enter!
+
+**Duration:** ${durationMinutes} minutes  
+**Winners:** ${keyCount} + **Item:** ${itemName}
+
+Hosted by: <@${message.author.id}>
+
+${riggedUser ? `⚠️ **This giveaway has a rigged winner:** <@${riggedUser.id}>` : ''}`
+  );
+
+  // Add reaction for entry
+  await giveawayMsg.react('🎁');
+
+  // Timer for giveaway
+  setTimeout(async () => {
+    const fetched = await giveawayMsg.fetch();
+    const reaction = fetched.reactions.cache.get('🎁');
+
+    if (!reaction) {
+      return message.channel.send('❌ No reactions found.');
+    }
+
+    const usersFetched = await reaction.users.fetch();
+    const entrants = usersFetched.filter(u => !u.bot).map(u => u);
+
+    if (entrants.length === 0) {
+      return message.channel.send('❌ No one entered the giveaway.');
+    }
+
+    let winners = [];
+
+    // If rigged
+    if (riggedUser) {
+      winners.push(riggedUser);
+
+      // Remove rigged user from the entrant pool (if they reacted)
+      const remaining = entrants.filter(e => e.id !== riggedUser.id);
+
+      // Fill remaining winners randomly
+      while (winners.length < keyCount && remaining.length > 0) {
+        const randomIndex = Math.floor(Math.random() * remaining.length);
+        winners.push(remaining[randomIndex]);
+        remaining.splice(randomIndex, 1);
+      }
+    } else {
+      // No rigging → pure random winners
+      let pool = [...entrants];
+      while (winners.length < keyCount && pool.length > 0) {
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        winners.push(pool[randomIndex]);
+        pool.splice(randomIndex, 1);
+      }
+    }
+
+    // Format winners
+    let resultText = '';
+    winners.forEach((user, i) => {
+      resultText += `🎉 **Winner ${i + 1}:** <@${user.id}>\n🔑 Key: \`${keys[i]}\`\n\n`;
+    });
+
+    // Item winner (same as winner #1)
+    const itemWinner = winners[0];
+
+    message.channel.send(
+      `🎉 **GIVEAWAY ENDED!** 🎉
+
+🧸 **Item Winner:** <@${itemWinner.id}>  
+🏆 **Item:** ${itemName}
+
+${resultText}
+
+Congrats to all winners!`
+    );
+
+  }, durationMinutes * 60 * 1000);
+
+  return;
+}
+
+
       // ---------------- NEW COMMAND ----------------
       case 'manualsys':
         return message.reply(
