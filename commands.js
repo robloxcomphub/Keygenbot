@@ -461,7 +461,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         try {
           await mentionedUser.send(`🎉 You have been whitelisted!
 
-🔑 **Your Key:** ${whitelistKey}
+🔑 **Your Key:** ```${whitelistKey}```
 
 ${validityMessage}
 
