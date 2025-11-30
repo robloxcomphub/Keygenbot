@@ -39,48 +39,49 @@ async function handleCommand(command, args, message) {
   try {
     switch (command) {
 
-
-        case 'revokelicense':
+        case 'revokekey':
   const revokeUser = message.mentions.users.first();
-  const revokeReason = args.slice(1).join(' ') || 'No reason provided';
+  const revokeKey = args[2]; // The key should be the third argument
+  const revokeReason = args.slice(1, 2).join(' ') || 'No reason provided';
 
-  if (!revokeUser) {
-    return message.reply('❌ Please mention a user. Usage: `!revokelicense @user <reason>`');
+  if (!revokeUser || !revokeKey) {
+    return message.reply('❌ Usage: `!revokekey @user <reason> <key>`');
   }
 
-  console.log(`🔄 Revoking license for ${revokeUser.tag} (${revokeUser.id})`);
+  console.log(`🔄 Revoking key ${revokeKey} for ${revokeUser.tag} (${revokeUser.id})`);
 
   try {
-    // Fetch all active keys
+    // Fetch all active keys to verify
     const allKeysRes = await API.get('/fetch/keys', { params: { apiKey } });
     const allKeys = allKeysRes.data.keys;
 
-    // Find the active key with note matching the user's whitelist
-    const targetKey = allKeys.find(k => k.note === `${revokeUser.id} premium whitelist`);
+    // Check if the key exists and matches the user
+    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id} premium whitelist`);
 
     if (!targetKey) {
-      return message.reply(`❌ No active license found for ${revokeUser.tag}`);
+      return message.reply(`❌ Key not found or does not belong to ${revokeUser.tag}`);
     }
 
     // Delete the key
-    await API.post('/key/delete', { apiKey, keyValue: targetKey.value });
+    await API.post('/key/delete', { apiKey, keyValue: revokeKey });
 
     // DM the user
     try {
       await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
 Reason: ${revokeReason}
-Key: ${targetKey.value}`);
+Key: ${revokeKey}`);
     } catch {
       console.log(`⚠️ Could not DM ${revokeUser.tag}`);
     }
 
-    return message.reply(`✅ Revoked active license for ${revokeUser.tag} and deleted key. Reason: ${revokeReason}`);
+    return message.reply(`✅ Revoked key ${revokeKey} for ${revokeUser.tag}. Reason: ${revokeReason}`);
 
   } catch (err) {
-    console.error('❌ Error revoking license:', err);
-    return message.reply('❌ An error occurred while revoking the license.');
+    console.error('❌ Error revoking key:', err);
+    return message.reply('❌ An error occurred while revoking the key.');
   }
   break;
+
 
 
 // -------------- END GIVEAWAY COMMAND --------------
