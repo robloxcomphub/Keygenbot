@@ -39,50 +39,6 @@ async function handleCommand(command, args, message) {
   try {
     switch (command) {
 
-        case 'revokekey':
-  const revokeUser = message.mentions.users.first();
-  const revokeKey = args[2]; // The key should be the third argument
-  const revokeReason = args.slice(1, 2).join(' ') || 'No reason provided';
-
-  if (!revokeUser || !revokeKey) {
-    return message.reply('❌ Usage: `!revokekey @user <reason> <key>`');
-  }
-
-  console.log(`🔄 Revoking key ${revokeKey} for ${revokeUser.tag} (${revokeUser.id})`);
-
-  try {
-    // Fetch all active keys to verify
-    const allKeysRes = await API.get('/fetch/keys', { params: { apiKey } });
-    const allKeys = allKeysRes.data.keys;
-
-    // Check if the key exists and matches the user
-    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id} premium whitelist`);
-
-    if (!targetKey) {
-      return message.reply(`❌ Key not found or does not belong to ${revokeUser.tag}`);
-    }
-
-    // Delete the key
-    await API.post('/key/delete', { apiKey, keyValue: revokeKey });
-
-    // DM the user
-    try {
-      await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
-Reason: ${revokeReason}
-Key: ${revokeKey}`);
-    } catch {
-      console.log(`⚠️ Could not DM ${revokeUser.tag}`);
-    }
-
-    return message.reply(`✅ Revoked key ${revokeKey} for ${revokeUser.tag}. Reason: ${revokeReason}`);
-
-  } catch (err) {
-    console.error('❌ Error revoking key:', err);
-    return message.reply('❌ An error occurred while revoking the key.');
-  }
-  break;
-
-
 
 // -------------- END GIVEAWAY COMMAND --------------
 case 'end': {
