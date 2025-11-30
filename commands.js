@@ -39,6 +39,50 @@ async function handleCommand(command, args, message) {
   try {
     switch (command) {
 
+
+
+        case 'revokelicense':
+  const revokeUser = message.mentions.users.first();
+  const revokeReason = args.slice(1).join(' ') || 'No reason provided';
+
+  if (!revokeUser) {
+    return message.reply('❌ Please mention a user. Usage: `!revokelicense @user <reason>`');
+  }
+
+  console.log(`🔄 Revoking license for ${revokeUser.tag} (${revokeUser.id})`);
+
+  try {
+    // Fetch all generated keys to find the one with their whitelist note
+    const allKeysRes = await API.get('/generated-keys', { params: { apiKey } });
+    const allKeys = allKeysRes.data.generatedKeys;
+
+    const targetKey = allKeys.find(k => k.note === `${revokeUser.id} premium whitelist`);
+
+    if (!targetKey) {
+      return message.reply(`❌ No license found for ${revokeUser.tag}`);
+    }
+
+    // Delete the key
+    await API.post('/generated-key/delete', { apiKey, keyValue: targetKey.value });
+
+    // DM the user
+    try {
+      await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
+Reason: ${revokeReason}
+Key: ${targetKey.value}`);
+    } catch {
+      console.log(`⚠️ Could not DM ${revokeUser.tag}`);
+    }
+
+    return message.reply(`✅ Revoked license for ${revokeUser.tag} and deleted key. Reason: ${revokeReason}`);
+
+  } catch (err) {
+    console.error('❌ Error revoking license:', err);
+    return message.reply('❌ An error occurred while revoking the license.');
+  }
+  break;
+
+
         // -------------- GIVEAWAY COMMAND --------------
 case 'giveaway': {
     if (!args[0] || !args[1]) {
