@@ -40,7 +40,6 @@ async function handleCommand(command, args, message) {
     switch (command) {
 
 
-
         case 'revokelicense':
   const revokeUser = message.mentions.users.first();
   const revokeReason = args.slice(1).join(' ') || 'No reason provided';
@@ -52,18 +51,19 @@ async function handleCommand(command, args, message) {
   console.log(`🔄 Revoking license for ${revokeUser.tag} (${revokeUser.id})`);
 
   try {
-    // Fetch all generated keys to find the one with their whitelist note
-    const allKeysRes = await API.get('/generated-keys', { params: { apiKey } });
-    const allKeys = allKeysRes.data.generatedKeys;
+    // Fetch all active keys
+    const allKeysRes = await API.get('/fetch/keys', { params: { apiKey } });
+    const allKeys = allKeysRes.data.keys;
 
+    // Find the active key with note matching the user's whitelist
     const targetKey = allKeys.find(k => k.note === `${revokeUser.id} premium whitelist`);
 
     if (!targetKey) {
-      return message.reply(`❌ No license found for ${revokeUser.tag}`);
+      return message.reply(`❌ No active license found for ${revokeUser.tag}`);
     }
 
     // Delete the key
-    await API.post('/generated-key/delete', { apiKey, keyValue: targetKey.value });
+    await API.post('/key/delete', { apiKey, keyValue: targetKey.value });
 
     // DM the user
     try {
@@ -74,7 +74,7 @@ Key: ${targetKey.value}`);
       console.log(`⚠️ Could not DM ${revokeUser.tag}`);
     }
 
-    return message.reply(`✅ Revoked license for ${revokeUser.tag} and deleted key. Reason: ${revokeReason}`);
+    return message.reply(`✅ Revoked active license for ${revokeUser.tag} and deleted key. Reason: ${revokeReason}`);
 
   } catch (err) {
     console.error('❌ Error revoking license:', err);
@@ -82,64 +82,6 @@ Key: ${targetKey.value}`);
   }
   break;
 
-
-        // -------------- GIVEAWAY COMMAND --------------
-case 'giveaway': {
-    if (!args[0] || !args[1]) {
-        return message.reply(
-            '❌ Usage: `!giveaway <minutes> <item> [@user]`\n' +
-            'Example normal: `!giveaway 10 Dominus-Astra`\n' +
-            'Example forced: `!giveaway 10 Dominus-Astra @User`'
-        );
-    }
-
-    const durationMinutes = parseInt(args[0]);
-    if (isNaN(durationMinutes) || durationMinutes <= 0)
-        return message.reply('❌ Duration must be a positive number.');
-
-    const item = args.slice(1).filter(a => !a.startsWith('<@')).join(' ');
-    if (!item) return message.reply('❌ You must specify an item.');
-
-    const forcedUser = message.mentions.users.first() || null;
-
-    const endTimestamp = Math.floor(Date.now() / 1000 + durationMinutes * 60);
-
-    const giveawayMsg = await message.channel.send(
-        `🎉 **GIVEAWAY STARTED!** 🎉\n` +
-        `**Item:** ${item}\n` +
-        `React with 🎉 to enter!\n` +
-        `Ends <t:${endTimestamp}:R>\n` +
-        `Hosted by <@${message.author.id}>`
-    );
-
-    await giveawayMsg.react('🎉');
-
-    // Track entrants and collector
-    const entrants = new Set();
-    const filter = (reaction, user) => reaction.emoji.name === '🎉' && !user.bot;
-    const collector = giveawayMsg.createReactionCollector({ filter, time: durationMinutes * 60 * 1000 });
-
-    collector.on('collect', (reaction, user) => {
-        entrants.add(user);
-    });
-
-    collector.on('end', async () => {
-        let winner;
-        if (forcedUser) {
-            winner = forcedUser;
-        } else {
-            const list = [...entrants];
-            winner = list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
-        }
-
-        let result = `🎉 **GIVEAWAY ENDED** 🎉\n**Item:** ${item}\nHosted by <@${message.author.id}>\n`;
-        result += winner ? `**Winner:** <@${winner.id}> 🎉` : '**Winner:** Nobody entered.';
-
-        await giveawayMsg.edit({ content: result });
-    });
-
-    return;
-}
 
 // -------------- END GIVEAWAY COMMAND --------------
 case 'end': {
