@@ -39,6 +39,50 @@ async function handleCommand(command, args, message) {
   try {
     switch (command) {
 
+        case 'revokekey':
+  const revokeUser = message.mentions.users.first();
+  const revokeKey = args[2]; // The key should be the third argument
+  const revokeReason = args.slice(1, 2).join(' ') || 'No reason provided';
+
+  if (!revokeUser || !revokeKey) {
+    return message.reply('❌ Usage: `!revokekey @user <reason> <key>`');
+  }
+
+  console.log(`🔄 Revoking key ${revokeKey} for ${revokeUser.tag} (${revokeUser.id})`);
+
+  try {
+    // Fetch all active keys to verify
+    const allKeysRes = await API.get('/fetch/keys', { params: { apiKey } });
+    const allKeys = allKeysRes.data.keys;
+
+    // Check if the key exists and matches the user
+    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id} premium whitelist`);
+
+    if (!targetKey) {
+      return message.reply(`❌ Key not found or does not belong to ${revokeUser.tag}`);
+    }
+
+    // Delete the key
+    await API.post('/key/delete', { apiKey, keyValue: revokeKey });
+
+    // DM the user
+    try {
+      await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
+Reason: ${revokeReason}
+Key: ${revokeKey}`);
+    } catch {
+      console.log(`⚠️ Could not DM ${revokeUser.tag}`);
+    }
+
+    return message.reply(`✅ Revoked key ${revokeKey} for ${revokeUser.tag}. Reason: ${revokeReason}`);
+
+  } catch (err) {
+    console.error('❌ Error revoking key:', err);
+    return message.reply('❌ An error occurred while revoking the key.');
+  }
+  break;
+
+
 
 // -------------- END GIVEAWAY COMMAND --------------
 case 'end': {
@@ -428,20 +472,20 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         
         return message.reply(createResponse('Execution Push', push.data.message));
 
-            case 'whitelist':
+      case 'whitelist':
         const mentionedUser = message.mentions.users.first();
-
+        
         if (!mentionedUser) {
           return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
         }
-
+        
         const isLifetime = args[1]?.toLowerCase() === 'lifetime';
         const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
         const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
         const whitelistNote = isLifetime ? `${mentionedUser.id} premium whitelist` : `Discord-${mentionedUser.id}`;
-
+        
         console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`);
-
+        
         const whitelistGen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
@@ -454,30 +498,36 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
             noHwidValidation: false
           }
         });
-
+        
         const whitelistKey = whitelistGen.data.generatedKeys[0].value;
         const validityMessage = isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`;
-
-        const formattedKey = `\`\`\`\n${whitelistKey}\n\`\`\``;
-
+        
         try {
-          await mentionedUser.send(
-            `🎉 You have been whitelisted!\n\n` +
-            `🔑 **Your Key:**\n${formattedKey}\n` +
-            `${validityMessage}\n\nEnjoy!`
-          );
+          await mentionedUser.send(`🎉 You have been whitelisted!
 
-          return message.reply(createResponse(
-            'Whitelist Success',
-            `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`
-          ));
+🔑 **Your Key:** ${whitelistKey}
 
+${validityMessage}
+
+Enjoy!`);
+          
+          return message.reply(createResponse('Whitelist Success', 
+            `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`));
         } catch (dmError) {
-          return message.reply(createResponse(
-            'Whitelist - DM Failed',
-            `Key generated but couldn't DM user.\nKey:\n${formattedKey}\nPlease share manually.`,
-            true
-          ));
+          return message.reply(createResponse('Whitelist - DM Failed', 
+            `Key generated but couldn't DM user.\nKey: ${whitelistKey}\nPlease share manually.`, true));
         }
+
+      default:
+        return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
+    }
+
+  } catch (error) {
+    console.error(`❌ API Error for command !${command}:`, error.response?.data || error.message);
+    
+    const errorMsg = formatError(error);
+    return message.reply(createResponse('Error', errorMsg, true));
+  }
+}
 
 module.exports = { handleCommand };
