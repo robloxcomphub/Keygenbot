@@ -428,20 +428,20 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         
         return message.reply(createResponse('Execution Push', push.data.message));
 
-      case 'whitelist':
+            case 'whitelist':
         const mentionedUser = message.mentions.users.first();
-        
+
         if (!mentionedUser) {
           return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
         }
-        
+
         const isLifetime = args[1]?.toLowerCase() === 'lifetime';
         const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
         const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
         const whitelistNote = isLifetime ? `${mentionedUser.id} premium whitelist` : `Discord-${mentionedUser.id}`;
-        
+
         console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`);
-        
+
         const whitelistGen = await API.get(`/generate-key/get`, {
           params: {
             apiKey: apiKey,
@@ -454,36 +454,30 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
             noHwidValidation: false
           }
         });
-        
+
         const whitelistKey = whitelistGen.data.generatedKeys[0].value;
         const validityMessage = isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`;
-        
+
+        const formattedKey = `\`\`\`\n${whitelistKey}\n\`\`\``;
+
         try {
-          await mentionedUser.send(`🎉 You have been whitelisted!
+          await mentionedUser.send(
+            `🎉 You have been whitelisted!\n\n` +
+            `🔑 **Your Key:**\n${formattedKey}\n` +
+            `${validityMessage}\n\nEnjoy!`
+          );
 
-🔑 **Your Key:** ```${whitelistKey}```
+          return message.reply(createResponse(
+            'Whitelist Success',
+            `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`
+          ));
 
-${validityMessage}
-
-Enjoy!`);
-          
-          return message.reply(createResponse('Whitelist Success', 
-            `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`));
         } catch (dmError) {
-          return message.reply(createResponse('Whitelist - DM Failed', 
-            `Key generated but couldn't DM user.\nKey: ${whitelistKey}\nPlease share manually.`, true));
+          return message.reply(createResponse(
+            'Whitelist - DM Failed',
+            `Key generated but couldn't DM user.\nKey:\n${formattedKey}\nPlease share manually.`,
+            true
+          ));
         }
-
-      default:
-        return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
-    }
-
-  } catch (error) {
-    console.error(`❌ API Error for command !${command}:`, error.response?.data || error.message);
-    
-    const errorMsg = formatError(error);
-    return message.reply(createResponse('Error', errorMsg, true));
-  }
-}
 
 module.exports = { handleCommand };
