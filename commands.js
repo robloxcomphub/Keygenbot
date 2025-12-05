@@ -482,7 +482,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         const isLifetime = args[1]?.toLowerCase() === 'lifetime';
         const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
         const whitelistExpireDate = new Date(Date.now() + whitelistDays * 24 * 60 * 60 * 1000).toISOString();
-        const whitelistNote = isLifetime ? `${mentionedUser.id} premium whitelist` : `Discord-${mentionedUser.id}`;
+        const whitelistNote = isLifetime ? `${mentionedUser.id} premium whitelist` : `${mentionedUser.id}`;
         
         console.log(`🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`);
         
