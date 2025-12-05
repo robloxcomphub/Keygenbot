@@ -56,7 +56,7 @@ async function handleCommand(command, args, message) {
     const allKeys = allKeysRes.data.keys;
 
     // Check if the key exists and matches the user
-    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id} premium whitelist`);
+    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id}`);
 
     if (!targetKey) {
       return message.reply(`❌ Key not found or does not belong to ${revokeUser.tag}`);
