@@ -505,11 +505,12 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
         try {
           await mentionedUser.send(`🎉 You have been whitelisted!
 
-🔑 **Your Key:** ${whitelistKey}
+🔑 **Your Key:** ||${whitelistKey}||
 
-${validityMessage}
+♾️ **Access type:** ${isLifetime ? 'Lifetime' : `${whitelistDays} day(s)`}
 
-Enjoy!`);
+Enjoy the script!
+- Comphub`);
           
           return message.reply(createResponse('Whitelist Success', 
             `User: ${mentionedUser.tag}\nKey sent via DM\n${validityMessage}`));
