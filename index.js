@@ -52,7 +52,7 @@ client.on('messageCreate', async message => {
     const member = message.member;
     if (!member.roles.cache.has(REQUIRED_ROLE_ID)) {
       console.log(`🚫 Access denied: ${message.author.tag} lacks required role`);
-      return message.reply('You do not have access to generate keys!');
+      return console.log(`🚫 Access denied: ${message.author.tag} lacks required role`); 
     }
   } else {
     return message.reply('❌ This bot can only be used in servers, not in DMs.');
