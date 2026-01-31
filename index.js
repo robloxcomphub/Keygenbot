@@ -1,4 +1,3 @@
-
 const express = require('express');
 const app = express();
 
@@ -92,18 +91,3 @@ client.login(token).catch(error => {
   console.error('❌ Failed to login to Discord:', error);
   process.exit(1);
 });
-
-console.log("🚀 Starting Discord login…");
-
-client.login(token)
-  .then(() => {
-    console.log("🔑 Login promise resolved");
-  })
-  .catch(error => {
-    console.error("❌ Login promise rejected:", error);
-  });
-
-setTimeout(() => {
-  console.log("⏱️ 5 seconds passed after login attempt");
-}, 5000);
-
