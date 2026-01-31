@@ -1,3 +1,10 @@
+const major = Number(process.versions.node.split('.')[0]);
+if (major < 18) {
+  console.error('❌ Node 18+ required for discord.js v14');
+  process.exit(1);
+}
+
+
 const express = require('express');
 const app = express();
 
