@@ -520,7 +520,7 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
     .addFields(
       {
         name: '🔑 Your Key',
-        value: `\`\`\`${whitelistKey}\`\`\``
+        value: `\`\`\`${whitelistKey}\`\`\`\n📋 **Mobile copy:** (${whitelistKey})`
       },
       {
         name: '💎 Premium',
