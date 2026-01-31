@@ -108,7 +108,7 @@ case 'end': {
       case 'manualsys':
         return message.reply(
           "Hello, please complete the manual key system with the link below and join the server it leads to" +
-          "then show proof of completion and click on the checkpoint 2 channel and complete the second checkpoint:\n" +
+          " then show proof of completion and click on the checkpoint 2 channel and complete the second checkpoint:\n" +
           "https://rinku.pro/manual1"
         );
       // ------------------------------------------------
