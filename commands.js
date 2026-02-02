@@ -1,5 +1,3 @@
-const activeGiveaways = new Map(); 
-// messageId => { winnerId, channelId, timeout }
 
 
 const axios = require('axios');
@@ -42,75 +40,6 @@ async function handleCommand(command, args, message) {
 
   try {
     switch (command) {
-
-
-
-        case 'giveaway': {
-  const days = parseInt(args[0]);
-  const winner = message.mentions.users.first();
-  const prize = args.slice(2).join(' ');
-
-  if (!days || !winner || !prize) {
-    return message.reply(
-      '❌ Usage: `!giveaway <days> @winner <prize>`'
-    );
-  }
-
-  if (days <= 0 || days > 30) {
-    return message.reply('❌ Giveaway duration must be between 1 and 30 days.');
-  }
-
-  const durationMs = days * 24 * 60 * 60 * 1000;
-  const endTimestamp = Math.floor((Date.now() + durationMs) / 1000);
-
-  // Create giveaway message
-  const giveawayMsg = await message.channel.send(
-    `🎉 **GIVEAWAY** 🎉\n\n` +
-    `🏆 **Prize:** ${prize}\n` +
-    `⏳ **Ends:** <t:${endTimestamp}:R>\n` +
-    `👤 **Hosted by:** <@${message.author.id}>\n\n` +
-    `React with 🎉 (for vibes)`
-  );
-
-  // Optional reaction (purely cosmetic)
-  await giveawayMsg.react('🎉').catch(() => {});
-
-  // Store giveaway data
-  const timeout = setTimeout(async () => {
-    try {
-      await giveawayMsg.edit(
-        `🎉 **GIVEAWAY ENDED** 🎉\n\n` +
-        `🏆 **Prize:** ${prize}\n` +
-        `👑 **Winner:** <@${winner.id}>\n` +
-        `📌 **Hosted by:** <@${message.author.id}>`
-      );
-
-      // Optional DM
-      try {
-        await winner.send(
-          `🎉 You won the giveaway!\n\n🏆 Prize: **${prize}**\nServer: **${message.guild.name}**`
-        );
-      } catch {}
-
-      activeGiveaways.delete(giveawayMsg.id);
-    } catch (err) {
-      console.error('❌ Giveaway end error:', err);
-    }
-  }, durationMs);
-
-  activeGiveaways.set(giveawayMsg.id, {
-    winnerId: winner.id,
-    channelId: message.channel.id,
-    timeout
-  });
-
-  return message.reply(
-    `✅ Giveaway started.\n` +
-    `🏆 Prize: **${prize}**\n` +
-    `👑 Winner: ${winner.tag}\n` +
-    `⏳ Duration: ${days} day(s)`
-  );
-}
 
 
         case 'revokekey':
