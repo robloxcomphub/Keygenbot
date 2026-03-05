@@ -467,7 +467,6 @@ Key: ${revokeKey}`);
       case 'help': {
         const helpText = `**🤖 License Management Bot Commands (Updated API)**
 
-**Role Required:** <@&1441518702007943253>
 
 **Key Search & User Management:**
 \`!searchkeys <Discord ID|@user|note>\` - Search for keys by Discord ID or note
@@ -786,7 +785,7 @@ HWID Validation: Enabled`;
         console.log(`🔑 Generating ${keyCount} ${keyType} key(s)`);
         const response = await API.post('/keys/api/generate', {
           count: keyCount,
-          prefix: isPremium ? 'PREMIUM' : 'NORMAL',
+          prefix: isPremium ? 'PREMIUM' : 'COMPHUB',
           expirationType: 'byDays',
           expirationDays: days,
           isPremium: isPremium,
