@@ -1,15 +1,22 @@
-
-
 const axios = require('axios');
 
-// API configuration
+// API configuration - Updated baseURL
 const API = axios.create({
-  baseURL: 'https://pandadevelopment.net/api',
+  baseURL: 'https://new.pandadevelopment.net/api/v1',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+// Role ID that can use commands
+const ALLOWED_ROLE_ID = '1441518702007943253';
+
+// Helper function to check if user has the required role
+function hasAllowedRole(member) {
+  if (!member) return false;
+  return member.roles.cache.has(ALLOWED_ROLE_ID);
+}
 
 // Helper function to format error messages
 function formatError(error) {
@@ -32,167 +39,693 @@ function createResponse(title, content, isError = false) {
 }
 
 async function handleCommand(command, args, message) {
+  // Check if user has the required role
+  if (!hasAllowedRole(message.member)) {
+    return message.reply('❌ You do not have permission to use bot commands. Required role: <@&1441518702007943253>');
+  }
+
   const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
     return message.reply('❌ API key not configured. Please contact an administrator.');
   }
 
+  // Set the API key header for all requests
+  API.defaults.headers.common['X-API-Key'] = apiKey;
+
   try {
     switch (command) {
+      // ============ KEY SEARCH BY DISCORD ID ============
+      case 'searchkeys':
+      case 'findkeys': {
+        let searchTerm = args.join(' ');
+        let userId = null;
+        
+        // Check if it's a mention
+        if (message.mentions.users.first()) {
+          userId = message.mentions.users.first().id;
+          searchTerm = userId;
+        }
+        // Check if it's a raw Discord ID (numbers only)
+        else if (args[0] && /^\d{17,19}$/.test(args[0])) {
+          userId = args[0];
+          searchTerm = userId;
+        }
+        
+        if (!searchTerm) {
+          return message.reply('❌ Please provide a Discord ID, mention a user, or provide a search term. Usage: `!searchkeys <Discord ID|@user|note>`');
+        }
 
+        console.log(`🔍 Searching keys with term: ${searchTerm}${userId ? ` (User ID: ${userId})` : ''}`);
 
-        case 'revokekey':
-  const revokeUser = message.mentions.users.first();
-  const revokeKey = args[2]; // The key should be the third argument
-  const revokeReason = args.slice(1, 2).join(' ') || 'No reason provided';
+        // Fetch all keys (this might need pagination if you have many keys)
+        // Note: The API doesn't have a direct search by note endpoint, so we'll need to fetch and filter
+        
+        // Try to fetch from both active and generated keys
+        // Since we can't fetch all keys at once, we'll need to search by note pattern
+        
+        // For demonstration, we'll search by note pattern using the key endpoints
+        // In a production environment, you might want to implement pagination or a better search strategy
+        
+        const results = {
+          active: [],
+          generated: []
+        };
+        
+        // Search active keys - we'll need to do multiple requests or use a different approach
+        // This is a simplified version - in production you might want to implement a search endpoint
+        
+        // For now, we'll use the note search endpoint if available, or inform the user
+        // Since the API doesn't have a bulk search, we'll provide instructions
+        
+        let responseMessage = '';
+        
+        if (userId) {
+          // Search by Discord ID in notes
+          try {
+            // Try to search by note containing the user ID
+            // Note: This assumes keys have the Discord ID in their note field
+            const activeResponse = await API.get(`/keys/api/key?note=${userId}`);
+            if (activeResponse.data.data?.key) {
+              results.active.push(activeResponse.data.data.key);
+            }
+          } catch (e) {
+            // Key not found by exact note
+          }
+          
+          try {
+            const genResponse = await API.get(`/keys/api/generated-key?note=${userId}`);
+            if (genResponse.data.data?.key) {
+              results.generated.push(genResponse.data.data.key);
+            }
+          } catch (e) {
+            // Key not found by exact note
+          }
+          
+          // Also try with Discord mention format in note
+          const mentionFormat = `<@${userId}>`;
+          try {
+            const activeResponse = await API.get(`/keys/api/key?note=${mentionFormat}`);
+            if (activeResponse.data.data?.key) {
+              // Avoid duplicates
+              if (!results.active.some(k => k.value === activeResponse.data.data.key.value)) {
+                results.active.push(activeResponse.data.data.key);
+              }
+            }
+          } catch (e) {}
+          
+          try {
+            const genResponse = await API.get(`/keys/api/generated-key?note=${mentionFormat}`);
+            if (genResponse.data.data?.key) {
+              if (!results.generated.some(k => k.value === genResponse.data.data.key.value)) {
+                results.generated.push(genResponse.data.data.key);
+              }
+            }
+          } catch (e) {}
+        } else {
+          // Search by general note text
+          try {
+            const activeResponse = await API.get(`/keys/api/key?note=${encodeURIComponent(searchTerm)}`);
+            if (activeResponse.data.data?.key) {
+              results.active.push(activeResponse.data.data.key);
+            }
+          } catch (e) {}
+          
+          try {
+            const genResponse = await API.get(`/keys/api/generated-key?note=${encodeURIComponent(searchTerm)}`);
+            if (genResponse.data.data?.key) {
+              results.generated.push(genResponse.data.data.key);
+            }
+          } catch (e) {}
+        }
+        
+        // Format results
+        const totalKeys = results.active.length + results.generated.length;
+        
+        if (totalKeys === 0) {
+          return message.reply(createResponse('Key Search', `No keys found for: ${searchTerm}`));
+        }
+        
+        let formattedResults = `Search term: ${searchTerm}\nFound: ${totalKeys} key(s)\n\n`;
+        
+        if (results.active.length > 0) {
+          formattedResults += `📌 **ACTIVE KEYS (${results.active.length})**\n`;
+          results.active.forEach((key, index) => {
+            formattedResults += `\n${index + 1}. Key: ${key.value}\n`;
+            formattedResults += `   Premium: ${key.isPremium ? 'Yes' : 'No'}\n`;
+            formattedResults += `   HWID: ${key.hwid || 'Not set'}\n`;
+            formattedResults += `   Note: ${key.note || 'None'}\n`;
+            formattedResults += `   Expires: ${key.expiresAt ? new Date(key.expiresAt).toLocaleString() : 'Never'}\n`;
+            formattedResults += `   Status: ${key.status || 'ACTIVE'}\n`;
+            formattedResults += `   Last Used: ${key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : 'Never'}\n`;
+          });
+        }
+        
+        if (results.generated.length > 0) {
+          formattedResults += `\n📦 **GENERATED KEYS (${results.generated.length})**\n`;
+          results.generated.forEach((key, index) => {
+            formattedResults += `\n${index + 1}. Key: ${key.value}\n`;
+            formattedResults += `   Premium: ${key.isPremium ? 'Yes' : 'No'}\n`;
+            formattedResults += `   Note: ${key.note || 'None'}\n`;
+            formattedResults += `   Expires: ${key.expiresAt ? new Date(key.expiresAt).toLocaleString() : 'Never'}\n`;
+            formattedResults += `   Status: ${key.status || 'GENERATED'}\n`;
+          });
+        }
+        
+        // If message is too long, split it
+        if (formattedResults.length > 2000) {
+          const chunks = formattedResults.match(/.{1,1900}/g) || [];
+          await message.reply(createResponse('Key Search Results (Part 1)', chunks[0]));
+          for (let i = 1; i < chunks.length; i++) {
+            await message.channel.send(createResponse(`Key Search Results (Part ${i + 1})`, chunks[i]));
+          }
+        } else {
+          return message.reply(createResponse('Key Search Results', formattedResults));
+        }
+        break;
+      }
 
-  if (!revokeUser || !revokeKey) {
-    return message.reply('❌ Usage: `!revokekey @user <reason> <key>`');
-  }
+      // ============ ENHANCED REVOKE BY USER ============
+      case 'revokekeys':
+      case 'revokeuser': {
+        const targetUser = message.mentions.users.first();
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        
+        if (!targetUser) {
+          return message.reply('❌ Please mention a user. Usage: `!revokeuser @user [reason]`');
+        }
+        
+        console.log(`🔄 Revoking ALL keys for ${targetUser.tag} (${targetUser.id})`);
+        
+        // Search for all keys belonging to this user
+        const userId = targetUser.id;
+        const keysToRevoke = [];
+        
+        // Search in active keys
+        try {
+          const activeResponse = await API.get(`/keys/api/key?note=${userId}`);
+          if (activeResponse.data.data?.key) {
+            keysToRevoke.push(activeResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        try {
+          const activeMentionResponse = await API.get(`/keys/api/key?note=<@${userId}>`);
+          if (activeMentionResponse.data.data?.key) {
+            if (!keysToRevoke.some(k => k.value === activeMentionResponse.data.data.key.value)) {
+              keysToRevoke.push(activeMentionResponse.data.data.key);
+            }
+          }
+        } catch (e) {}
+        
+        // Search in generated keys
+        try {
+          const genResponse = await API.get(`/keys/api/generated-key?note=${userId}`);
+          if (genResponse.data.data?.key) {
+            keysToRevoke.push(genResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        try {
+          const genMentionResponse = await API.get(`/keys/api/generated-key?note=<@${userId}>`);
+          if (genMentionResponse.data.data?.key) {
+            if (!keysToRevoke.some(k => k.value === genMentionResponse.data.data.key.value)) {
+              keysToRevoke.push(genMentionResponse.data.data.key);
+            }
+          }
+        } catch (e) {}
+        
+        if (keysToRevoke.length === 0) {
+          return message.reply(`❌ No keys found for ${targetUser.tag}`);
+        }
+        
+        // Revoke all found keys
+        const results = {
+          success: [],
+          failed: []
+        };
+        
+        for (const key of keysToRevoke) {
+          try {
+            // Try to delete from active keys first
+            await API.delete('/keys/api/key', { data: { key: key.value } });
+            results.success.push(key.value);
+          } catch (e) {
+            try {
+              // If not active, try generated keys
+              await API.delete('/keys/api/generated-key', { data: { key: key.value } });
+              results.success.push(key.value);
+            } catch (e2) {
+              results.failed.push(key.value);
+            }
+          }
+        }
+        
+        // DM the user
+        try {
+          await targetUser.send(`⚠️ Your license(s) have been revoked by an administrator.
+Reason: ${reason}
+Keys revoked: ${results.success.length}`);
+        } catch {
+          console.log(`⚠️ Could not DM ${targetUser.tag}`);
+        }
+        
+        const resultMessage = `Revoked ${results.success.length} key(s) for ${targetUser.tag}
+${results.failed.length > 0 ? `Failed to revoke: ${results.failed.join(', ')}` : ''}
+Reason: ${reason}`;
+        
+        return message.reply(createResponse('Keys Revoked', resultMessage, results.failed.length > 0));
+      }
 
-  console.log(`🔄 Revoking key ${revokeKey} for ${revokeUser.tag} (${revokeUser.id})`);
+      // ============ LIST ALL KEYS FOR USER ============
+      case 'userkeys': {
+        const targetUser = message.mentions.users.first() || message.author;
+        
+        console.log(`📋 Listing keys for ${targetUser.tag} (${targetUser.id})`);
+        
+        const userId = targetUser.id;
+        const keys = {
+          active: [],
+          generated: []
+        };
+        
+        // Search for keys
+        try {
+          const activeResponse = await API.get(`/keys/api/key?note=${userId}`);
+          if (activeResponse.data.data?.key) {
+            keys.active.push(activeResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        try {
+          const activeMentionResponse = await API.get(`/keys/api/key?note=<@${userId}>`);
+          if (activeMentionResponse.data.data?.key && 
+              !keys.active.some(k => k.value === activeMentionResponse.data.data.key.value)) {
+            keys.active.push(activeMentionResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        try {
+          const genResponse = await API.get(`/keys/api/generated-key?note=${userId}`);
+          if (genResponse.data.data?.key) {
+            keys.generated.push(genResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        try {
+          const genMentionResponse = await API.get(`/keys/api/generated-key?note=<@${userId}>`);
+          if (genMentionResponse.data.data?.key &&
+              !keys.generated.some(k => k.value === genMentionResponse.data.data.key.value)) {
+            keys.generated.push(genMentionResponse.data.data.key);
+          }
+        } catch (e) {}
+        
+        const totalKeys = keys.active.length + keys.generated.length;
+        
+        if (totalKeys === 0) {
+          return message.reply(`❌ No keys found for ${targetUser.tag}`);
+        }
+        
+        let formattedResults = `Keys for ${targetUser.tag} (${targetUser.id})\nTotal: ${totalKeys}\n\n`;
+        
+        if (keys.active.length > 0) {
+          formattedResults += `**ACTIVE KEYS (${keys.active.length})**\n`;
+          keys.active.forEach((key, index) => {
+            formattedResults += `\n${index + 1}. Key: ${key.value}\n`;
+            formattedResults += `   Premium: ${key.isPremium ? 'Yes' : 'No'}\n`;
+            formattedResults += `   HWID: ${key.hwid || 'Not set'}\n`;
+            formattedResults += `   Expires: ${key.expiresAt ? new Date(key.expiresAt).toLocaleString() : 'Never'}\n`;
+            formattedResults += `   Last Used: ${key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : 'Never'}\n`;
+          });
+        }
+        
+        if (keys.generated.length > 0) {
+          formattedResults += `\n**GENERATED KEYS (${keys.generated.length})**\n`;
+          keys.generated.forEach((key, index) => {
+            formattedResults += `\n${index + 1}. Key: ${key.value}\n`;
+            formattedResults += `   Premium: ${key.isPremium ? 'Yes' : 'No'}\n`;
+            formattedResults += `   Expires: ${key.expiresAt ? new Date(key.expiresAt).toLocaleString() : 'Never'}\n`;
+          });
+        }
+        
+        return message.reply(createResponse('User Keys', formattedResults));
+      }
 
-  try {
-    // Fetch all active keys to verify
-    const allKeysRes = await API.get('/fetch/keys', { params: { apiKey } });
-    const allKeys = allKeysRes.data.keys;
+      // ============ UPDATE KEY NOTE WITH USER ID ============
+      case 'assignkey': {
+        const targetUser = message.mentions.users.first();
+        const keyValue = args[1];
+        
+        if (!targetUser || !keyValue) {
+          return message.reply('❌ Usage: `!assignkey @user <key>`');
+        }
+        
+        console.log(`📝 Assigning key ${keyValue} to ${targetUser.tag}`);
+        
+        // Try to update the key note with the user ID
+        try {
+          // Try active keys first
+          const response = await API.put('/keys/api/key', {
+            key: keyValue,
+            note: targetUser.id
+          });
+          
+          return message.reply(createResponse('Key Assigned', 
+            `Key ${keyValue} has been assigned to ${targetUser.tag}\nNote updated to: ${targetUser.id}`));
+        } catch (e) {
+          try {
+            // Try generated keys
+            const response = await API.put('/keys/api/generated-key', {
+              key: keyValue,
+              note: targetUser.id
+            });
+            
+            return message.reply(createResponse('Key Assigned', 
+              `Key ${keyValue} has been assigned to ${targetUser.tag}\nNote updated to: ${targetUser.id}`));
+          } catch (e2) {
+            return message.reply(`❌ Could not find key ${keyValue} or update its note.`);
+          }
+        }
+      }
 
-    // Check if the key exists and matches the user
-    const targetKey = allKeys.find(k => k.value === revokeKey && k.note === `${revokeUser.id}`);
+      case 'revokekey': {
+        const revokeUser = message.mentions.users.first();
+        const revokeKey = args[2]; // The key should be the third argument
+        const revokeReason = args.slice(1, 2).join(' ') || 'No reason provided';
 
-    if (!targetKey) {
-      return message.reply(`❌ Key not found or does not belong to ${revokeUser.tag}`);
-    }
+        if (!revokeUser || !revokeKey) {
+          return message.reply('❌ Usage: `!revokekey @user <reason> <key>`');
+        }
 
-    // Delete the key
-    await API.post('/key/delete', { apiKey, keyValue: revokeKey });
+        console.log(`🔄 Revoking key ${revokeKey} for ${revokeUser.tag} (${revokeUser.id})`);
 
-    // DM the user
-    try {
-      await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
+        try {
+          // Delete the key using the new endpoint
+          await API.delete('/keys/api/key', { 
+            data: { key: revokeKey }
+          });
+
+          // DM the user
+          try {
+            await revokeUser.send(`⚠️ Your premium license has been revoked by an administrator.
 Reason: ${revokeReason}
 Key: ${revokeKey}`);
-    } catch {
-      console.log(`⚠️ Could not DM ${revokeUser.tag}`);
-    }
+          } catch {
+            console.log(`⚠️ Could not DM ${revokeUser.tag}`);
+          }
 
-    return message.reply(`✅ Revoked key ${revokeKey} for ${revokeUser.tag}. Reason: ${revokeReason}`);
+          return message.reply(`✅ Revoked key ${revokeKey} for ${revokeUser.tag}. Reason: ${revokeReason}`);
 
-  } catch (err) {
-    console.error('❌ Error revoking key:', err);
-    return message.reply('❌ An error occurred while revoking the key.');
-  }
-  break;
+        } catch (err) {
+          console.error('❌ Error revoking key:', err);
+          return message.reply('❌ An error occurred while revoking the key.');
+        }
+      }
 
+      case 'end': {
+        const msgId = args[0];
+        if (!msgId) return message.reply('❌ Provide a message ID of the giveaway.');
 
+        const channel = message.channel;
+        const giveawayMsg = await channel.messages.fetch(msgId).catch(() => null);
+        if (!giveawayMsg) return message.reply('❌ Giveaway message not found.');
 
-// -------------- END GIVEAWAY COMMAND --------------
-case 'end': {
-    const msgId = args[0];
-    if (!msgId) return message.reply('❌ Provide a message ID of the giveaway.');
+        // End giveaway manually by editing message
+        const content = `🎉 **GIVEAWAY ENDED** 🎉\nManually ended by <@${message.author.id}>`;
+        await giveawayMsg.edit({ content });
 
-    const channel = message.channel;
-    const giveawayMsg = await channel.messages.fetch(msgId).catch(() => null);
-    if (!giveawayMsg) return message.reply('❌ Giveaway message not found.');
+        return message.reply('✅ Giveaway ended manually.');
+      }
 
-    // End giveaway manually by editing message
-    const winner = null; // Optional: could force yourself or leave null
-    const content = `🎉 **GIVEAWAY ENDED** 🎉\nManually ended by <@${message.author.id}>`;
-    await giveawayMsg.edit({ content });
-
-    return message.reply('✅ Giveaway ended manually.');
-}
-
-
-
-       
-      // ---------------- NEW COMMAND ----------------
       case 'manualsys':
         return message.reply(
           "Hello, please complete the manual key system with the link below and join the server it leads to" +
           " then show proof of completion and click on the checkpoint 2 channel and complete the second checkpoint:\n" +
           "https://rinku.pro/manual1"
         );
-      // ------------------------------------------------
 
-      case 'help':
-        const helpText = `**🤖 License Management Bot Commands**
+      case 'help': {
+        const helpText = `**🤖 License Management Bot Commands (Updated API)**
 
-**User & Service Management:**
-\`!userdata\` - Get current user information
-\`!revenuemode <service>\` - Check revenue mode for a service
-\`!checkidentifier <identifier>\` - Validate an identifier
+**Role Required:** <@&1441518702007943253>
 
-**Key Management:**
+**Key Search & User Management:**
+\`!searchkeys <Discord ID|@user|note>\` - Search for keys by Discord ID or note
+\`!userkeys [@user]\` - List all keys for a user (defaults to yourself)
+\`!assignkey @user <key>\` - Assign a key to a user by updating its note
+\`!revokekeys @user [reason]\` - Revoke ALL keys for a user
+\`!revokekey @user <reason> <key>\` - Revoke a specific key
+
+**Key Generation:**
 \`!whitelist @user [days|lifetime]\` - Generate key and DM to user
 \`!genkey <count> [note] [days]\` - Generate premium license key(s)
-\`!genkeypost <count> [note] [days]\` - Generate premium keys via POST
 \`!gennormalkey <count> [note] [days]\` - Generate normal license key(s)
-\`!gennormalkeypost <count> [note] [days]\` - Generate normal keys via POST
-\`!fetchkey <key>\` - Look up a key
-\`!editkey <key> [note] [isPremium] [days]\` - Edit a key
-\`!editgenkey <key> [note] [isPremium] [days]\` - Edit a generated key
-\`!deletekey <key>\` - Delete a key
-\`!deletegenkey <key>\` - Delete a generated key
 
-**HWID & Execution:**
-\`!resethwid <service> <key>\` - Reset HWID
+**Key Management:**
+\`!fetchkey <key>\` - Look up an active key
+\`!fetchgenkey <key>\` - Look up a generated key
+\`!editkey <key> [note] [isPremium] [days]\` - Edit an active key
+\`!editgenkey <key> [note] [isPremium] [days]\` - Edit a generated key
+\`!deletekey <key>\` - Delete an active key
+\`!deletegenkey <key>\` - Delete a generated key
+\`!extendkey <key> <days>\` - Extend a key's expiration
+
+**Blacklist Management:**
+\`!blacklist add <hwid> [reason] [expiresAt]\` - Add HWID to blacklist
+\`!blacklist remove <hwid>\` - Remove HWID from blacklist
+\`!blacklist list\` - List all blacklisted HWIDs
+\`!blacklist check <hwid>\` - Check if HWID is blacklisted
+
+**Keyless Management:**
+\`!keyless add <hwid> [isPremium] [days]\` - Add HWID to keyless whitelist
+\`!keyless remove <hwid>\` - Remove HWID from keyless whitelist
+\`!keyless get <hwid>\` - Get keyless entry info
+
+**Service Information:**
+\`!serviceinfo\` - Get service details and configuration
+\`!servicestatus\` - Get real-time analytics
 \`!executioncount\` - Fetch execution count
 \`!pushexecution\` - Push execution count
+\`!webhook <message>\` - Send message to Discord webhook
 
 **Other:**
 \`!manualsys\` - Manual system instructions
 \`!help\` - Show this help message`;
 
         return message.reply(helpText);
+      }
 
-      case 'userdata':
-        console.log('🔍 Fetching user data...');
-        const user = await API.get('/user');
+      case 'blacklist': {
+        const subCommand = args[0]?.toLowerCase();
         
-        const userData = user.data;
-        const userInfo = `ID: ${userData.id || 'N/A'}
-Username: ${userData.username || 'N/A'}
-Service ID: ${userData.service?.id || 'N/A'}
-Service Identifier: ${userData.service?.identifier || 'N/A'}`;
+        if (subCommand === 'add') {
+          const hwid = args[1];
+          const reason = args.slice(2, args.length - 1).join(' ') || null;
+          const expiresAt = args[args.length - 1]?.match(/^\d{4}-\d{2}-\d{2}/) ? args[args.length - 1] : null;
+          
+          if (!hwid) {
+            return message.reply('❌ Usage: `!blacklist add <hwid> [reason] [expiresAt]`');
+          }
+          
+          console.log(`🚫 Adding HWID to blacklist: ${hwid}`);
+          const response = await API.post('/keys/api/blacklist', {
+            hwid,
+            reason,
+            expiresAt
+          });
+          
+          const entry = response.data.entry;
+          const blacklistInfo = `HWID: ${entry.hwid}
+Reason: ${entry.reason || 'No reason'}
+Expires: ${entry.expiresAt ? new Date(entry.expiresAt).toLocaleString() : 'Never'}
+Created: ${new Date(entry.createdAt).toLocaleString()}`;
+          
+          return message.reply(createResponse('HWID Blacklisted', blacklistInfo));
+        }
         
-        return message.reply(createResponse('User Information', userInfo));
+        else if (subCommand === 'remove') {
+          const hwid = args[1];
+          if (!hwid) {
+            return message.reply('❌ Usage: `!blacklist remove <hwid>`');
+          }
+          
+          console.log(`🚫 Removing HWID from blacklist: ${hwid}`);
+          await API.delete('/keys/api/blacklist', {
+            data: { hwid }
+          });
+          
+          return message.reply(createResponse('HWID Removed', `Successfully removed ${hwid} from blacklist`));
+        }
+        
+        else if (subCommand === 'list') {
+          console.log('📋 Fetching blacklist...');
+          const response = await API.get('/keys/api/blacklist');
+          
+          if (response.data.blacklist.length === 0) {
+            return message.reply('✅ No blacklisted HWIDs found.');
+          }
+          
+          const blacklistItems = response.data.blacklist.map((entry, index) => 
+            `${index + 1}. HWID: ${entry.hwid}\n   Reason: ${entry.reason || 'None'}\n   Expires: ${entry.expiresAt ? new Date(entry.expiresAt).toLocaleString() : 'Never'}`
+          ).join('\n\n');
+          
+          return message.reply(createResponse(`Blacklisted HWIDs (${response.data.count})`, blacklistItems));
+        }
+        
+        else if (subCommand === 'check') {
+          const hwid = args[1];
+          if (!hwid) {
+            return message.reply('❌ Usage: `!blacklist check <hwid>`');
+          }
+          
+          console.log(`🔍 Checking HWID: ${hwid}`);
+          const response = await API.get(`/keys/api/blacklist/check?hwid=${hwid}`);
+          
+          if (response.data.blacklisted) {
+            const info = `HWID: ${hwid}
+Status: BLACKLISTED
+Reason: ${response.data.reason || 'No reason'}
+Expires: ${response.data.expiresAt ? new Date(response.data.expiresAt).toLocaleString() : 'Never'}`;
+            return message.reply(createResponse('HWID Blacklist Check', info, true));
+          } else {
+            return message.reply(createResponse('HWID Blacklist Check', `HWID ${hwid} is NOT blacklisted`));
+          }
+        }
+        
+        else {
+          return message.reply('❌ Usage: `!blacklist <add|remove|list|check> ...`');
+        }
+      }
 
-      case 'revenuemode':
+      case 'keyless': {
+        const subCommand = args[0]?.toLowerCase();
+        
+        if (subCommand === 'add') {
+          const hwid = args[1];
+          const isPremium = args[2]?.toLowerCase() === 'true';
+          const days = args[3] ? parseInt(args[3]) : 365;
+          
+          if (!hwid) {
+            return message.reply('❌ Usage: `!keyless add <hwid> [isPremium] [days]`');
+          }
+          
+          const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+          
+          console.log(`🔑 Adding keyless entry for HWID: ${hwid}`);
+          const response = await API.post('/keys/api/keyless', {
+            hwid,
+            isPremium,
+            expiresAt
+          });
+          
+          const entry = response.data.data.entry;
+          const keylessInfo = `HWID: ${entry.hwid}
+Premium: ${entry.isPremium ? 'Yes' : 'No'}
+Expires: ${entry.expiresAt ? new Date(entry.expiresAt).toLocaleString() : 'Never'}
+Created: ${new Date(entry.createdAt).toLocaleString()}`;
+          
+          return message.reply(createResponse('Keyless Entry Added', keylessInfo));
+        }
+        
+        else if (subCommand === 'remove') {
+          const hwid = args[1];
+          if (!hwid) {
+            return message.reply('❌ Usage: `!keyless remove <hwid>`');
+          }
+          
+          console.log(`🗑️ Removing keyless entry: ${hwid}`);
+          await API.delete('/keys/api/keyless', {
+            data: { hwid }
+          });
+          
+          return message.reply(createResponse('Keyless Entry Removed', `Successfully removed ${hwid}`));
+        }
+        
+        else if (subCommand === 'get') {
+          const hwid = args[1];
+          if (!hwid) {
+            return message.reply('❌ Usage: `!keyless get <hwid>`');
+          }
+          
+          console.log(`🔍 Fetching keyless entry: ${hwid}`);
+          const response = await API.get(`/keys/api/keyless?hwid=${hwid}`);
+          
+          const entry = response.data.data.entry;
+          const keylessInfo = `HWID: ${entry.hwid}
+IP: ${entry.ipAddress || 'N/A'}
+Premium: ${entry.isPremium ? 'Yes' : 'No'}
+Expires: ${entry.expiresAt ? new Date(entry.expiresAt).toLocaleString() : 'Never'}
+Last Used: ${entry.lastUsedAt ? new Date(entry.lastUsedAt).toLocaleString() : 'Never'}
+Created: ${new Date(entry.createdAt).toLocaleString()}`;
+          
+          return message.reply(createResponse('Keyless Entry', keylessInfo));
+        }
+        
+        else {
+          return message.reply('❌ Usage: `!keyless <add|remove|get> ...`');
+        }
+      }
+
+      case 'serviceinfo': {
+        console.log('ℹ️ Fetching service info...');
+        const response = await API.get('/keys/api/service/info');
+        
+        const data = response.data.data;
+        const settings = data.settings;
+        
+        const info = `Service Name: ${data.name}
+Identifier: ${data.identifier}
+Status: ${data.isActive ? 'Active' : 'Inactive'}
+Total Executions: ${data.totalExecutions}
+Last Active: ${data.lastActiveAt ? new Date(data.lastActiveAt).toLocaleString() : 'Never'}
+Created: ${new Date(data.createdAt).toLocaleString()}
+
+Settings:
+• Key Prefix: ${settings.keyPrefix}
+• Key Format: ${settings.keyFormat}
+• Checkpoint Count: ${settings.checkpointCount}
+• Revenue Mode: ${settings.revenueMode}
+• Keyless Mode: ${settings.keylessMode ? 'Enabled' : 'Disabled'}
+• HWID Verification: ${settings.hwidVerification ? 'Enabled' : 'Disabled'}
+• Multi-Account: ${settings.multiAccountEnabled ? 'Enabled' : 'Disabled'}
+• Session Limit: ${settings.sessionLimitEnabled ? 'Enabled' : 'Disabled'}`;
+        
+        return message.reply(createResponse('Service Information', info));
+      }
+
+      case 'servicestatus': {
+        console.log('📊 Fetching service status...');
+        const response = await API.get('/keys/api/service/status');
+        
+        const data = response.data.data;
+        
+        const status = `Active Keys: ${data.activeKeys}
+Generated Keys: ${data.generatedKeys}
+Keyless Entries: ${data.keylessEntries}
+Blacklisted HWIDs: ${data.blacklistedHwids}
+Total Executions: ${data.totalExecutions}
+Last Active: ${data.lastActiveAt ? new Date(data.lastActiveAt).toLocaleString() : 'Never'}`;
+        
+        return message.reply(createResponse('Service Status', status));
+      }
+
+      case 'webhook': {
         if (!args[0]) {
-          return message.reply('❌ Please provide a service identifier. Usage: `!revenuemode <service>`');
+          return message.reply('❌ Please provide a message. Usage: `!webhook <message>`');
         }
         
-        console.log(`🔍 Checking revenue mode for service: ${args[0]}`);
-        const revenue = await API.get(`/revenue-mode?service=${args[0]}`);
+        const content = args.join(' ');
+        console.log(`📤 Sending webhook message: ${content}`);
         
-        const revenueInfo = `Service: ${args[0]}
-Revenue Mode: ${revenue.data.revenueMode}`;
+        const response = await API.post('/keys/api/webhook', {
+          content,
+          username: 'License Bot'
+        });
         
-        return message.reply(createResponse('Revenue Mode', revenueInfo));
+        return message.reply(createResponse('Webhook Sent', response.data.message));
+      }
 
-      case 'checkidentifier':
-        if (!args[0]) {
-          return message.reply('❌ Please provide an identifier. Usage: `!checkidentifier <identifier>`');
-        }
-        
-        console.log(`🔍 Checking identifier: ${args[0]}`);
-        const check = await API.get(`/identifier-check?apiKey=${apiKey}&identifier=${args[0]}`);
-        
-        return message.reply(createResponse('Identifier Check', check.data.message));
-
-      case 'resethwid':
-        if (!args[0] || !args[1]) {
-          return message.reply('❌ Please provide service and key. Usage: `!resethwid <service> <key>`');
-        }
-        
-        console.log(`🔄 Resetting HWID for service: ${args[0]}, key: ${args[1]}`);
-        const reset = await API.get(`/reset-hwid?service=${args[0]}&key=${args[1]}`);
-        
-        return message.reply(createResponse('HWID Reset', reset.data.message));
-
-      case 'genkey':
+      case 'genkey': {
         if (!args[0]) {
           return message.reply('❌ Please provide key count. Usage: `!genkey <count> [note] [days]`');
         }
@@ -206,21 +739,19 @@ Revenue Mode: ${revenue.data.revenueMode}`;
         }
         
         const expireDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${keyCount} key(s) with note: ${note}, days: ${days}`);
-        const gen = await API.get(`/generate-key/get`, {
-          params: {
-            apiKey: apiKey,
-            count: keyCount,
-            isPremium: true,
-            note: note,
-            expire: expireDate,
-            expiresByDaysKey: true,
-            daysKey: days,
-            noHwidValidation: false
-          }
+        
+        console.log(`🔑 Generating ${keyCount} premium key(s)`);
+        const response = await API.post('/keys/api/generate', {
+          count: keyCount,
+          prefix: 'PREMIUM',
+          expirationType: 'byDays',
+          expirationDays: days,
+          isPremium: true,
+          noHwidValidation: false,
+          note: note
         });
         
-        const keys = gen.data.generatedKeys;
+        const keys = response.data.data.keys;
         const keyList = keys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
         const keyInfo = `Generated ${keyCount} key(s):
 ${keyList}
@@ -230,345 +761,340 @@ Expires: ${days} days from creation
 Premium: Yes
 HWID Validation: Enabled`;
         
-        return message.reply(createResponse('Key Generation (GET)', keyInfo));
+        return message.reply(createResponse('Key Generation', keyInfo));
+      }
 
       case 'genkeypost':
-        if (!args[0]) {
-          return message.reply('❌ Please provide key count. Usage: `!genkeypost <count> [note] [days]`');
-        }
-        
-        const postKeyCount = parseInt(args[0]);
-        const postNote = args[1] || `Discord-${message.author.id}`;
-        const postDays = parseInt(args[2]) || 30;
-        
-        if (postKeyCount > 100) {
-          return message.reply('❌ Maximum 100 keys can be generated at once.');
-        }
-        
-        const postExpireDate = new Date(Date.now() + postDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${postKeyCount} key(s) via POST`);
-        
-        const genPost = await API.post('/generate-key/post', {
-          apiKey: apiKey,
-          count: postKeyCount,
-          isPremium: true,
-          note: postNote,
-          expire: postExpireDate,
-          expiresByDaysKey: true,
-          daysKey: postDays,
-          noHwidValidation: false
-        });
-        
-        const postKeys = genPost.data.generatedKeys;
-        const postKeyList = postKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
-        const postKeyInfo = `Generated ${postKeyCount} key(s):
-${postKeyList}
-
-Note: ${postNote}
-Expires: ${postDays} days from creation
-Premium: Yes
-HWID Validation: Enabled`;
-        
-        return message.reply(createResponse('Key Generation (POST)', postKeyInfo));
-
       case 'gennormalkey':
+      case 'gennormalkeypost': {
         if (!args[0]) {
-          return message.reply('❌ Please provide key count. Usage: `!gennormalkey <count> [note] [days]`');
+          return message.reply('❌ Please provide key count. Usage: `!genkey <count> [note] [days]`');
         }
         
-        const normalKeyCount = parseInt(args[0]);
-        const normalNote = args[1] || `Discord-${message.author.id}`;
-        const normalDays = args[2] ? parseInt(args[2]) : 30;
+        const keyCount = parseInt(args[0]);
+        const note = args[1] || `Discord-${message.author.id}`;
+        const days = parseInt(args[2]) || 30;
+        const isPremium = command.includes('normal') ? false : true;
         
-        if (normalKeyCount > 100) {
+        if (keyCount > 100) {
           return message.reply('❌ Maximum 100 keys can be generated at once.');
         }
         
-        const normalExpireDate = new Date(Date.now() + normalDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${normalKeyCount} normal key(s)`);
+        const expireDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        const keyType = isPremium ? 'premium' : 'normal';
         
-        const normalGen = await API.get(`/generate-key/get`, {
-          params: {
-            apiKey: apiKey,
-            count: normalKeyCount,
-            isPremium: false,
-            note: normalNote,
-            expire: normalExpireDate,
-            expiresByDaysKey: true,
-            daysKey: normalDays,
-            noHwidValidation: false
-          }
+        console.log(`🔑 Generating ${keyCount} ${keyType} key(s)`);
+        const response = await API.post('/keys/api/generate', {
+          count: keyCount,
+          prefix: isPremium ? 'PREMIUM' : 'NORMAL',
+          expirationType: 'byDays',
+          expirationDays: days,
+          isPremium: isPremium,
+          noHwidValidation: false,
+          note: note
         });
         
-        const normalKeys = normalGen.data.generatedKeys;
-        const normalKeyList = normalKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
-        const normalKeyInfo = `Generated ${normalKeyCount} normal key(s):
-${normalKeyList}
+        const keys = response.data.data.keys;
+        const keyList = keys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
+        const keyInfo = `Generated ${keyCount} ${keyType} key(s):
+${keyList}
 
-Note: ${normalNote}
-Expires: ${normalDays} days from creation
-Premium: No
+Note: ${note}
+Expires: ${days} days from creation
+Premium: ${isPremium ? 'Yes' : 'No'}
 HWID Validation: Enabled`;
         
-        return message.reply(createResponse('Normal Key Generation (GET)', normalKeyInfo));
+        return message.reply(createResponse(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} Key Generation`, keyInfo));
+      }
 
-      case 'gennormalkeypost':
-        if (!args[0]) {
-          return message.reply('❌ Please provide key count. Usage: `!gennormalkeypost <count> [note] [days]`');
-        }
-        
-        const normalPostKeyCount = parseInt(args[0]);
-        const normalPostNote = args[1] || `Discord-${message.author.id}`;
-        const normalPostDays = args[2] ? parseInt(args[2]) : 30;
-        
-        if (normalPostKeyCount > 100) {
-          return message.reply('❌ Maximum 100 keys can be generated at once.');
-        }
-        
-        const normalPostExpireDate = new Date(Date.now() + normalPostDays * 24 * 60 * 60 * 1000).toISOString();
-        console.log(`🔑 Generating ${normalPostKeyCount} normal key(s) via POST`);
-        
-        const normalGenPost = await API.post('/generate-key/post', {
-          apiKey: apiKey,
-          count: normalPostKeyCount,
-          isPremium: false,
-          note: normalPostNote,
-          expire: normalPostExpireDate,
-          expiresByDaysKey: true,
-          daysKey: normalPostDays,
-          noHwidValidation: false
-        });
-        
-        const normalPostKeys = normalGenPost.data.generatedKeys;
-        const normalPostKeyList = normalPostKeys.map((key, index) => `${index + 1}. ${key.value}`).join('\n');
-        const normalPostKeyInfo = `Generated ${normalPostKeyCount} normal key(s):
-${normalPostKeyList}
-
-Note: ${normalPostNote}
-Expires: ${normalPostDays} days from creation
-Premium: No
-HWID Validation: Enabled`;
-        
-        return message.reply(createResponse('Normal Key Generation (POST)', normalPostKeyInfo));
-
-      case 'fetchkey':
+      case 'fetchkey': {
         if (!args[0]) {
           return message.reply('❌ Please provide a key. Usage: `!fetchkey <key>`');
         }
         
-        console.log(`🔍 Fetching key information: ${args[0]}`);
-        const fkey = await API.get(`/fetch/key`, {
-          params: {
-            apiKey: apiKey,
-            fetch: args[0]
-          }
-        });
+        console.log(`🔍 Fetching active key information: ${args[0]}`);
         
-        const keyData = fkey.data.key;
-        const fetchedKeyInfo = `Key: ${keyData.value || 'N/A'}
+        try {
+          const response = await API.get(`/keys/api/key?key=${args[0]}`);
+          
+          const keyData = response.data.data.key;
+          const fetchedKeyInfo = `Key: ${keyData.value || 'N/A'}
 ID: ${keyData.id || 'N/A'}
 Premium: ${keyData.isPremium ? 'Yes' : 'No'}
 Note: ${keyData.note || 'None'}
-Expires: ${keyData.expiresAt ? new Date(keyData.expiresAt).toLocaleString() : 'Never'}
+Status: ${keyData.status || 'N/A'}
 HWID: ${keyData.hwid || 'Not set'}
-HWID Validation: ${keyData.noHwidValidation ? 'Disabled' : 'Enabled'}`;
-        
-        return message.reply(createResponse('Key Information', fetchedKeyInfo));
+HWID Validation: ${keyData.noHwidValidation ? 'Disabled' : 'Enabled'}
+Expires: ${keyData.expiresAt ? new Date(keyData.expiresAt).toLocaleString() : 'Never'}
+Last Used: ${keyData.lastUsedAt ? new Date(keyData.lastUsedAt).toLocaleString() : 'Never'}
+Last Reset: ${keyData.lastResetAt ? new Date(keyData.lastResetAt).toLocaleString() : 'Never'}
+Created: ${keyData.createdAt ? new Date(keyData.createdAt).toLocaleString() : 'Never'}`;
+          
+          return message.reply(createResponse('Active Key Information', fetchedKeyInfo));
+        } catch (error) {
+          if (error.response?.status === 404) {
+            return message.reply('❌ Key not found in active keys.');
+          }
+          throw error;
+        }
+      }
 
-      case 'editkey':
+      case 'fetchgenkey': {
+        if (!args[0]) {
+          return message.reply('❌ Please provide a key. Usage: `!fetchgenkey <key>`');
+        }
+        
+        console.log(`🔍 Fetching generated key information: ${args[0]}`);
+        
+        try {
+          const response = await API.get(`/keys/api/generated-key?key=${args[0]}`);
+          
+          const keyData = response.data.data.key;
+          const fetchedKeyInfo = `Key: ${keyData.value || 'N/A'}
+ID: ${keyData.id || 'N/A'}
+Premium: ${keyData.isPremium ? 'Yes' : 'No'}
+Note: ${keyData.note || 'None'}
+Status: ${keyData.status || 'N/A'}
+HWID Validation: ${keyData.noHwidValidation ? 'Disabled' : 'Enabled'}
+Expires: ${keyData.expiresAt ? new Date(keyData.expiresAt).toLocaleString() : 'Never'}
+Created: ${keyData.createdAt ? new Date(keyData.createdAt).toLocaleString() : 'Never'}`;
+          
+          return message.reply(createResponse('Generated Key Information', fetchedKeyInfo));
+        } catch (error) {
+          if (error.response?.status === 404) {
+            return message.reply('❌ Key not found in generated keys.');
+          }
+          throw error;
+        }
+      }
+
+      case 'editkey': {
         if (!args[0]) {
           return message.reply('❌ Please provide a key. Usage: `!editkey <key> [note] [isPremium] [days]`');
         }
         
         const editNote = args[1] || 'Edited via Discord Bot';
-        const isPremium = args[2] ? args[2] === 'true' : true;
-        const editDays = parseInt(args[3]) || 30;
+        const isPremium = args[2] ? args[2] === 'true' : undefined;
+        const editDays = args[3] ? parseInt(args[3]) : undefined;
         
-        console.log(`✏️ Editing key: ${args[0]}`);
-        const editKey = await API.post('/key/edit', {
-          apiKey,
-          keyValue: args[0],
-          note: editNote,
-          isPremium: isPremium,
-          expiresByDaysKey: true,
-          daysKey: editDays,
-          noHwidValidation: false
-        });
+        console.log(`✏️ Editing active key: ${args[0]}`);
         
-        const editedKey = editKey.data.key;
+        const updateData = {
+          key: args[0],
+          note: editNote
+        };
+        
+        if (isPremium !== undefined) updateData.isPremium = isPremium;
+        if (editDays) {
+          updateData.expiresAt = new Date(Date.now() + editDays * 24 * 60 * 60 * 1000).toISOString();
+        }
+        
+        const response = await API.put('/keys/api/key', updateData);
+        
+        const editedKey = response.data.data.key;
         const editInfo = `Key: ${editedKey.value}
 Note: ${editedKey.note}
 Premium: ${editedKey.isPremium ? 'Yes' : 'No'}
-Expires: ${editedKey.expiresAt ? new Date(editedKey.expiresAt).toLocaleString() : 'Never'}
-Days: ${editedKey.daysKey || 'N/A'}
-HWID Validation: ${editedKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
+Status: ${editedKey.status}
+HWID: ${editedKey.hwid || 'Not set'}
+HWID Validation: ${editedKey.noHwidValidation ? 'Disabled' : 'Enabled'}
+Expires: ${editedKey.expiresAt ? new Date(editedKey.expiresAt).toLocaleString() : 'Never'}`;
         
-        return message.reply(createResponse('Key Edit Success', editInfo));
+        return message.reply(createResponse('Active Key Edit Success', editInfo));
+      }
 
-      case 'editgenkey':
+      case 'editgenkey': {
         if (!args[0]) {
           return message.reply('❌ Please provide a key. Usage: `!editgenkey <key> [note] [isPremium] [days]`');
         }
         
-        const editGenNote = args[1] || 'Edited via Discord Bot';
-        const isGenPremium = args[2] ? args[2] === 'true' : true;
-        const editGenDays = parseInt(args[3]) || 30;
+        const editNote = args[1] || 'Edited via Discord Bot';
+        const isPremium = args[2] ? args[2] === 'true' : undefined;
+        const editDays = args[3] ? parseInt(args[3]) : undefined;
         
         console.log(`✏️ Editing generated key: ${args[0]}`);
-        const editGen = await API.post('/generated-key/edit', {
-          apiKey,
-          keyValue: args[0],
-          note: editGenNote,
-          isPremium: isGenPremium,
-          expiresByDaysKey: true,
-          daysKey: editGenDays,
-          noHwidValidation: false
-        });
         
-        const editedGenKey = editGen.data.generatedKey;
-        const editGenInfo = `Generated Key: ${editedGenKey.value}
-Note: ${editedGenKey.note}
-Premium: ${editedGenKey.isPremium ? 'Yes' : 'No'}
-Expires: ${editedGenKey.expiresAt ? new Date(editedGenKey.expiresAt).toLocaleString() : 'Never'}
-Days: ${editedGenKey.daysKey || 'N/A'}
-HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
+        const updateData = {
+          key: args[0],
+          note: editNote
+        };
         
-        return message.reply(createResponse('Generated Key Edit Success', editGenInfo));
+        if (isPremium !== undefined) updateData.isPremium = isPremium;
+        if (editDays) {
+          updateData.expiresAt = new Date(Date.now() + editDays * 24 * 60 * 60 * 1000).toISOString();
+        }
+        
+        const response = await API.put('/keys/api/generated-key', updateData);
+        
+        const editedKey = response.data.data.key;
+        const editInfo = `Key: ${editedKey.value}
+Note: ${editedKey.note}
+Premium: ${editedKey.isPremium ? 'Yes' : 'No'}
+Status: ${editedKey.status}
+HWID Validation: ${editedKey.noHwidValidation ? 'Disabled' : 'Enabled'}
+Expires: ${editedKey.expiresAt ? new Date(editedKey.expiresAt).toLocaleString() : 'Never'}`;
+        
+        return message.reply(createResponse('Generated Key Edit Success', editInfo));
+      }
 
-      case 'deletekey':
+      case 'deletekey': {
         if (!args[0]) {
           return message.reply('❌ Please provide a key. Usage: `!deletekey <key>`');
         }
         
-        console.log(`🗑️ Deleting key: ${args[0]}`);
-        const del = await API.post('/key/delete', { 
-          apiKey, 
-          keyValue: args[0] 
+        console.log(`🗑️ Deleting active key: ${args[0]}`);
+        const response = await API.delete('/keys/api/key', {
+          data: { key: args[0] }
         });
         
-        return message.reply(createResponse('Key Deletion', del.data.message));
+        return message.reply(createResponse('Active Key Deletion', response.data.message));
+      }
 
-      case 'deletegenkey':
+      case 'deletegenkey': {
         if (!args[0]) {
           return message.reply('❌ Please provide a key. Usage: `!deletegenkey <key>`');
         }
         
         console.log(`🗑️ Deleting generated key: ${args[0]}`);
-        const delgen = await API.post('/generated-key/delete', { 
-          apiKey, 
-          keyValue: args[0] 
+        const response = await API.delete('/keys/api/generated-key', {
+          data: { key: args[0] }
         });
         
-        return message.reply(createResponse('Generated Key Deletion', delgen.data.message));
+        return message.reply(createResponse('Generated Key Deletion', response.data.message));
+      }
 
-      case 'executioncount':
-        console.log('📊 Fetching execution count...');
-        const execCount = await API.get(`/execution/fetch?apiKey=${apiKey}`);
+      case 'extendkey': {
+        if (!args[0] || !args[1]) {
+          return message.reply('❌ Usage: `!extendkey <key> <days>`');
+        }
         
-        const countInfo = `Current Execution Count: ${execCount.data.executionCount}`;
+        const key = args[0];
+        const days = parseInt(args[1]);
+        
+        if (isNaN(days) || days <= 0) {
+          return message.reply('❌ Please provide a valid number of days.');
+        }
+        
+        console.log(`⏰ Extending key ${key} by ${days} days`);
+        const response = await API.post('/keys/api/key/extend-expiration', {
+          key,
+          days
+        });
+        
+        const data = response.data.data;
+        const extendInfo = `Key: ${data.key}
+Old Expiration: ${new Date(data.oldExpiresAt).toLocaleString()}
+New Expiration: ${new Date(data.newExpiresAt).toLocaleString()}
+Extended by: ${days} days`;
+        
+        return message.reply(createResponse('Key Extended', extendInfo));
+      }
+
+      case 'executioncount': {
+        console.log('📊 Fetching execution count...');
+        const response = await API.get('/keys/api/execution');
+        
+        const countInfo = `Total Executions: ${response.data.data.totalExecutions}
+Last Active: ${response.data.data.lastActiveAt ? new Date(response.data.data.lastActiveAt).toLocaleString() : 'Never'}`;
         
         return message.reply(createResponse('Execution Count', countInfo));
+      }
 
-      case 'pushexecution':
+      case 'pushexecution': {
         console.log('📈 Pushing execution count...');
-        const push = await API.post('/execution/push', { apiKey });
+        const response = await API.post('/keys/api/execution');
         
-        return message.reply(createResponse('Execution Push', push.data.message));
+        return message.reply(createResponse('Execution Push', response.data.message));
+      }
 
       case 'whitelist': {
-  const { EmbedBuilder } = require('discord.js');
+        const { EmbedBuilder } = require('discord.js');
 
-  const mentionedUser = message.mentions.users.first();
-  if (!mentionedUser) {
-    return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
-  }
+        const mentionedUser = message.mentions.users.first();
+        if (!mentionedUser) {
+          return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
+        }
 
-  const isLifetime = args[1]?.toLowerCase() === 'lifetime';
-  const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
-  const whitelistExpireDate = new Date(
-    Date.now() + whitelistDays * 24 * 60 * 60 * 1000
-  ).toISOString();
+        const isLifetime = args[1]?.toLowerCase() === 'lifetime';
+        const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
+        const whitelistNote = isLifetime
+          ? mentionedUser.id // Store just the ID for easier searching
+          : mentionedUser.id;
 
-  const whitelistNote = isLifetime
-    ? `${mentionedUser.id} premium whitelist`
-    : `${mentionedUser.id}`;
+        console.log(
+          `🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ` +
+          `${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`
+        );
 
-  console.log(
-    `🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ` +
-    `${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`
-  );
+        const response = await API.post('/keys/api/generate', {
+          count: 1,
+          prefix: 'PREMIUM',
+          expirationType: isLifetime ? 'lifetime' : 'byDays',
+          expirationDays: isLifetime ? undefined : whitelistDays,
+          isPremium: true,
+          noHwidValidation: false,
+          note: whitelistNote // Store just the ID for easier searching
+        });
 
-  const whitelistGen = await API.get(`/generate-key/get`, {
-    params: {
-      apiKey: apiKey,
-      count: 1,
-      isPremium: true,
-      note: whitelistNote,
-      expire: whitelistExpireDate,
-      expiresByDaysKey: true,
-      daysKey: whitelistDays,
-      noHwidValidation: false
-    }
-  });
+        const whitelistKey = response.data.data.keys[0].value;
 
-  const whitelistKey = whitelistGen.data.generatedKeys[0].value;
+        // ===== DM EMBED =====
+        const whitelistEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setAuthor({
+            name: "You've Been Whitelisted in CompHub 👑",
+            iconURL: message.guild.iconURL({ dynamic: true })
+          })
+          .addFields(
+            {
+              name: '🔑 Your Key',
+              value: `\`\`\`${whitelistKey}\`\`\`\n📋 **Tap & copy:** \`${whitelistKey}\``
+            },
+            {
+              name: '💎 Premium',
+              value: 'Yes',
+              inline: true
+            },
+            {
+              name: '⏳ Expires',
+              value: isLifetime ? 'Lifetime' : `${whitelistDays} days`,
+              inline: true
+            }
+          )
+          .setFooter({ text: `Granted by: ${message.author.tag}` })
+          .setTimestamp();
 
-  // ===== DM EMBED =====
-  const whitelistEmbed = new EmbedBuilder()
-    .setColor(0x5865F2)
-    .setAuthor({
-      name: "You've Been Whitelisted in CompHub 👑",
-      iconURL: message.guild.iconURL({ dynamic: true })
-    })
-    .addFields(
-      {
-        name: '🔑 Your Key',
-        value: `\`\`\`${whitelistKey}\`\`\`\n📋 **Tap & copy:** \`${whitelistKey}\``
-      },
-      {
-        name: '💎 Premium',
-        value: 'Yes',
-        inline: true
-      },
-      {
-        name: '⏳ Expires',
-        value: isLifetime ? 'Lifetime' : `${whitelistDays} days`,
-        inline: true
+        try {
+          // Send DM
+          await mentionedUser.send({ embeds: [whitelistEmbed] });
+
+          // Success reply in server
+          const successEmbed = new EmbedBuilder()
+            .setColor(0x57F287)
+            .setTitle('✅ Whitelist Success')
+            .setDescription(
+              `**User:** ${mentionedUser.tag}\n` +
+              `**Key:** Sent via DM\n` +
+              `${isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`}`
+            );
+
+          return message.reply({ embeds: [successEmbed] });
+
+        } catch (dmError) {
+          // DM failed
+          const failEmbed = new EmbedBuilder()
+            .setColor(0xED4245)
+            .setTitle('⚠️ Whitelist – DM Failed')
+            .setDescription(
+              `Key generated but couldn't DM the user.\n\n` +
+              `🔑 **Key:**\n\`\`\`${whitelistKey}\`\`\`\n` +
+              `Please share manually.`
+            );
+
+          return message.reply({ embeds: [failEmbed] });
+        }
       }
-    )
-    .setFooter({ text: `Granted by: ${message.author.tag}` })
-    .setTimestamp();
 
-  try {
-    // Send DM
-    await mentionedUser.send({ embeds: [whitelistEmbed] });
-
-    // Success reply in server
-    const successEmbed = new EmbedBuilder()
-      .setColor(0x57F287)
-      .setTitle('✅ Whitelist Success')
-      .setDescription(
-        `**User:** ${mentionedUser.tag}\n` +
-        `**Key:** Sent via DM\n` +
-        `${isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`}`
-      );
-
-    return message.reply({ embeds: [successEmbed] });
-
-  } catch (dmError) {
-    // DM failed
-    const failEmbed = new EmbedBuilder()
-      .setColor(0xED4245)
-      .setTitle('⚠️ Whitelist – DM Failed')
-      .setDescription(
-        `Key generated but couldn't DM the user.\n\n` +
-        `🔑 **Key:**\n\`\`\`${whitelistKey}\`\`\`\n` +
-        `Please share manually.`
-      );
-
-    return message.reply({ embeds: [failEmbed] });
-  }
-}
       default:
         return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
     }
@@ -576,7 +1102,18 @@ HWID Validation: ${editedGenKey.noHwidValidation ? 'Disabled' : 'Enabled'}`;
   } catch (error) {
     console.error(`❌ API Error for command !${command}:`, error.response?.data || error.message);
     
-    const errorMsg = formatError(error);
+    let errorMsg = formatError(error);
+    
+    // Add status code for better debugging
+    if (error.response?.status) {
+      errorMsg = `[${error.response.status}] ${errorMsg}`;
+      
+      // Add rate limit info
+      if (error.response.status === 429) {
+        errorMsg += '\nRate limit exceeded. Please wait a moment.';
+      }
+    }
+    
     return message.reply(createResponse('Error', errorMsg, true));
   }
 }
