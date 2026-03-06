@@ -1006,93 +1006,102 @@ Last Active: ${response.data.data.lastActiveAt ? new Date(response.data.data.las
         return message.reply(createResponse('Execution Push', response.data.message));
       }
 
-      case 'whitelist': {
-        const { EmbedBuilder } = require('discord.js');
+// ============ UPDATED WHITELIST ============
+case 'whitelist': {
+  const { EmbedBuilder } = require('discord.js');
 
-        const mentionedUser = message.mentions.users.first();
-        if (!mentionedUser) {
-          return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
-        }
+  const mentionedUser = message.mentions.users.first();
+  if (!mentionedUser) {
+    return message.reply('❌ Please mention a user. Usage: `!whitelist @user [days|lifetime]`');
+  }
 
-        const isLifetime = args[1]?.toLowerCase() === 'lifetime';
-        const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
-        const whitelistNote = isLifetime
-          ? mentionedUser.id // Store just the ID for easier searching
-          : mentionedUser.id;
+  const isLifetime = args[1]?.toLowerCase() === 'lifetime';
+  const whitelistDays = isLifetime ? 36500 : (parseInt(args[1]) || 30);
+  
+  // USE DISCORD ID AS THE PREFIX
+  const customPrefix = mentionedUser.id; // This will be the key prefix!
 
-        console.log(
-          `🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ` +
-          `${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`
-        );
+  console.log(
+    `🔑 Whitelisting user: ${mentionedUser.tag} (${mentionedUser.id}) - ` +
+    `${isLifetime ? 'LIFETIME' : whitelistDays + ' days'}`
+  );
 
-        const response = await API.post('/keys/api/generate', {
-          count: 1,
-          prefix: 'PREMIUM',
-          expirationType: isLifetime ? 'lifetime' : 'byDays',
-          expirationDays: isLifetime ? undefined : whitelistDays,
-          isPremium: true,
-          noHwidValidation: false,
-          note: whitelistNote // Store just the ID for easier searching
-        });
+  // Generate key with Discord ID as prefix
+  const response = await API.post('/keys/api/generate', {
+    count: 1,
+    prefix: customPrefix, // Discord ID becomes the key prefix
+    expirationType: isLifetime ? 'lifetime' : 'byDays',
+    expirationDays: isLifetime ? undefined : whitelistDays,
+    isPremium: true,
+    noHwidValidation: false,
+    note: mentionedUser.id // Also keep in note as backup
+  });
 
-        const whitelistKey = response.data.data.keys[0].value;
+  const whitelistKey = response.data.data.keys[0].value;
 
-        // ===== DM EMBED =====
-        const whitelistEmbed = new EmbedBuilder()
-          .setColor(0x5865F2)
-          .setAuthor({
-            name: "You've Been Whitelisted in CompHub 👑",
-            iconURL: message.guild.iconURL({ dynamic: true })
-          })
-          .addFields(
-            {
-              name: '🔑 Your Key',
-              value: `\`\`\`${whitelistKey}\`\`\`\n📋 **Tap & copy:** \`${whitelistKey}\``
-            },
-            {
-              name: '💎 Premium',
-              value: 'Yes',
-              inline: true
-            },
-            {
-              name: '⏳ Expires',
-              value: isLifetime ? 'Lifetime' : `${whitelistDays} days`,
-              inline: true
-            }
-          )
-          .setFooter({ text: `Granted by: ${message.author.tag}` })
-          .setTimestamp();
-
-        try {
-          // Send DM
-          await mentionedUser.send({ embeds: [whitelistEmbed] });
-
-          // Success reply in server
-          const successEmbed = new EmbedBuilder()
-            .setColor(0x57F287)
-            .setTitle('✅ Whitelist Success')
-            .setDescription(
-              `**User:** ${mentionedUser.tag}\n` +
-              `**Key:** Sent via DM\n` +
-              `${isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`}`
-            );
-
-          return message.reply({ embeds: [successEmbed] });
-
-        } catch (dmError) {
-          // DM failed
-          const failEmbed = new EmbedBuilder()
-            .setColor(0xED4245)
-            .setTitle('⚠️ Whitelist – DM Failed')
-            .setDescription(
-              `Key generated but couldn't DM the user.\n\n` +
-              `🔑 **Key:**\n\`\`\`${whitelistKey}\`\`\`\n` +
-              `Please share manually.`
-            );
-
-          return message.reply({ embeds: [failEmbed] });
-        }
+  // Create DM embed
+  const whitelistEmbed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setAuthor({
+      name: "You've Been Whitelisted in CompHub 👑",
+      iconURL: message.guild.iconURL({ dynamic: true })
+    })
+    .addFields(
+      {
+        name: '🔑 Your Key',
+        value: `\`\`\`${whitelistKey}\`\`\`\n📋 **Tap & copy:** \`${whitelistKey}\``
+      },
+      {
+        name: '💎 Premium',
+        value: 'Yes',
+        inline: true
+      },
+      {
+        name: '⏳ Expires',
+        value: isLifetime ? 'Lifetime' : `${whitelistDays} days`,
+        inline: true
+      },
+      {
+        name: '🔍 Identification',
+        value: `Your Discord ID is the key prefix: \`${mentionedUser.id}\``,
+        inline: true
       }
+    )
+    .setFooter({ text: `Granted by: ${message.author.tag}` })
+    .setTimestamp();
+
+  try {
+    // Send DM with the key
+    await mentionedUser.send({ embeds: [whitelistEmbed] });
+
+    // Success reply in server
+    const successEmbed = new EmbedBuilder()
+      .setColor(0x57F287)
+      .setTitle('✅ Whitelist Success')
+      .setDescription(
+        `**User:** ${mentionedUser.tag}\n` +
+        `**Key:** Sent via DM\n` +
+        `**Prefix:** \`${mentionedUser.id}\` (Discord ID)\n` +
+        `${isLifetime ? '♾️ Lifetime access' : `⏰ Valid for ${whitelistDays} days`}`
+      );
+
+    return message.reply({ embeds: [successEmbed] });
+
+  } catch (dmError) {
+    // DM failed - show key in channel
+    const failEmbed = new EmbedBuilder()
+      .setColor(0xED4245)
+      .setTitle('⚠️ Whitelist – DM Failed')
+      .setDescription(
+        `Key generated but couldn't DM the user.\n\n` +
+        `🔑 **Key:**\n\`\`\`${whitelistKey}\`\`\`\n` +
+        `**Prefix:** \`${mentionedUser.id}\` (Discord ID)\n` +
+        `Please share manually.`
+      );
+
+    return message.reply({ embeds: [failEmbed] });
+  }
+}
 
       default:
         return message.reply(`❌ Unknown command: \`!${command}\`\nUse \`!help\` to see available commands.`);
